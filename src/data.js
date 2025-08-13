@@ -44,8 +44,9 @@ export const tasks = [
   },
   {
     id: 4,
-    start: new Date(2023, 11, 12),
-    duration: 8,
+    open: true,
+    start: new Date(2023, 11, 15),
+    duration: 10,
     text: "Documentation",
     progress: 10,
     type: "summary"
@@ -53,16 +54,16 @@ export const tasks = [
   {
     id: 5,
     parent: 4,
-    start: new Date(2023, 11, 10),
-    duration: 1,
+    start: new Date(2023, 11, 15),
+    duration: 2,
     text: "Overview",
     progress: 30
   },
   {
     id: 6,
     parent: 4,
-    start: new Date(2023, 12, 11),
-    duration: 8,
+    start: new Date(2023, 11, 18),
+    duration: 7,
     text: "API reference",
     progress: 0
   }
@@ -91,10 +92,9 @@ export const columns = [
 ];
 
 export const links = [
-  { id: 1, source: 3, target: 4, type: "e2s" },
-  { id: 2, source: 1, target: 2, type: "e2s" },
-  { id: 21, source: 8, target: 1, type: "s2s" },
-  { id: 22, source: 1, target: 6, type: "s2s" },
+  { id: 1, source: 2, target: 3, type: "e2s" }, // Lib-Gantt → UI Layer
+  { id: 2, source: 3, target: 4, type: "e2s" }, // UI Layer → Documentation
+  { id: 3, source: 5, target: 6, type: "e2s" }, // Overview → API reference
 ];
 
 export const scales = [
