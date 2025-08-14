@@ -1,10 +1,11 @@
 <script>
   import { getData } from "./data.js";
-  import { Gantt, Willow  } from "wx-svelte-gantt";
+  import { Gantt, Willow,  ContextMenu, Editor, defaultEditorItems, Toolbar  } from "wx-svelte-gantt";
   import "./gantt-styles.css";
 
 
   const data = getData();
+  let api = $state();
 
   // Add some debugging
   console.log("Gantt data:", data);
@@ -15,10 +16,10 @@
 <main>
   <h1>Simple Gantt Viewer</h1>
 
-  <!-- Gantt using official demo structure -->
   <div class="gantt-container">
     <Willow>
     <Gantt
+      bind:this={api}
       tasks={data.tasks}
       links={data.links}
       scales={data.scales}
