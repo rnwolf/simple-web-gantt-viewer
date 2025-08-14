@@ -32,15 +32,22 @@ export const tasks = [
     start: new Date(2023, 11, 6),
     duration: 4,
     text: "Lib-Gantt",
-    progress: 80
-  },
-  {
+    progress: 80,
+    type: "urgent",
+    resources: "R001, R002",
+    optimistic: 4,
+    pessimistic: 6
+   },
+ {
     id: 3,
     parent: 1,
     start: new Date(2023, 11, 11),
     duration: 4,
     text: "UI Layer",
-    progress: 30
+    progress: 30,
+    resources: "R001, R002",
+    optimistic: 4,
+    pessimistic: 6
   },
   {
     id: 4,
@@ -57,7 +64,10 @@ export const tasks = [
     start: new Date(2023, 11, 15),
     duration: 2,
     text: "Overview",
-    progress: 30
+    progress: 30,
+    resources: "R001, R002",
+    optimistic: 4,
+    pessimistic: 6
   },
   {
     id: 6,
@@ -65,31 +75,45 @@ export const tasks = [
     start: new Date(2023, 11, 18),
     duration: 7,
     text: "API reference",
-    progress: 0
+    progress: 0,
+    resources: "R001, R002"
   }
 ];
 
 export const columns = [
-  { id: "text", header: "Task name", flexgrow: 2 },
-  {
-    id: "start",
-    header: "Start date",
-    flexgrow: 1,
-    align: "center",
-  },
-  {
-    id: "duration",
-    header: "Duration",
-    align: "center",
-    flexgrow: 1,
-  },
-  {
-    id: "add-task",
-    header: "",
-    width: 50,
-    align: "center",
-  },
-];
+    { id: "id",
+      header: "Task ID",
+      flexgrow: 1 ,
+      align: "center",
+    },
+    { id: "text",
+      header: "Task name",
+      flexgrow: 2 },
+    {
+      id: "start",
+      header: "Start date",
+      flexgrow: 1,
+      align: "center",
+    },
+    {
+      id: "duration",
+      header: "Duration",
+      align: "center",
+      flexgrow: 1,
+    },
+    {
+      id: "resources",
+      header: "Resources",
+      flexgrow: 1,
+      align: "center",
+    },    {
+      id: "add-task",
+      header: "",
+      width: 50,
+      align: "center",
+    },
+  ];
+
 
 export const links = [
   { id: 1, source: 2, target: 3, type: "e2s" }, // Lib-Gantt → UI Layer
@@ -102,12 +126,22 @@ export const scales = [
   { unit: "day", step: 1, format: "d", css: dayStyle },
 ];
 
+export const taskTypes = [
+    { id: "task", label: "Task" },
+    { id: "summary", label: "Summary task" },
+    { id: "milestone", label: "Milestone" },
+    { id: "urgent", label: "Urgent" },
+    { id: "narrow", label: "Narrow" },
+    { id: "progress", label: "Progress" },
+]
+
 // Main data export function
 export function getData() {
   return {
     tasks,
     links,
     scales,
-    columns
+    columns,
+    taskTypes,
   };
 }
