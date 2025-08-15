@@ -11,9 +11,12 @@
   let currentData = $state(getData());
   let api = $state();
 
-  let start = $state(new Date(2024, 11, 6)),
-		end = $state(new Date(2024, 11, 29)),
+  let start = $state(new Date(2023, 11, 1)),  // Remember in Java script months start at zero
+		end = $state(new Date(2023, 11, 29)),
+    today = $state(new Date(2023, 11, 12)),
 		autoScale = $state(false);
+
+  console.log("Latest start date:", start);
 
   // Hidden file input reference
   let fileInput;
@@ -340,14 +343,19 @@
 
     <Locale>
         <div class="bar">
-          <Field label="Start" position="left">
+          <Field label="Project Start (YYYY/MM/DD)" position="left">
             {#snippet children({ id })}
-              <DatePicker bind:value={start} {id} />
+              <DatePicker bind:value={start} {id} format={"%Y/%m/%d"}/>
             {/snippet}
           </Field>
           <Field label="End" position="left">
             {#snippet children({ id })}
               <DatePicker bind:value={end} {id} />
+            {/snippet}
+          </Field>
+          <Field label="Today" position="left">
+            {#snippet children({ id })}
+              <DatePicker bind:value={today} {id} />
             {/snippet}
           </Field>
           <Field label="autoScale" position="left">
@@ -373,6 +381,10 @@
       columns={currentData.columns}
       taskTypes={currentData.taskTypes}
       {highlightTime}
+      {autoScale}
+			zoom
+			{start}
+			{end}
     />
     </Fullscreen>
     <Editor {api} />
