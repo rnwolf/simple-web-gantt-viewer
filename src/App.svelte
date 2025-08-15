@@ -350,12 +350,12 @@
           </Field>
           <Field label="End" position="left">
             {#snippet children({ id })}
-              <DatePicker bind:value={end} {id} />
+              <DatePicker bind:value={end} {id} format={"%Y/%m/%d"}/>
             {/snippet}
           </Field>
           <Field label="Today" position="left">
             {#snippet children({ id })}
-              <DatePicker bind:value={today} {id} />
+              <DatePicker bind:value={today} {id} format={"%Y/%m/%d"}/>
             {/snippet}
           </Field>
           <Field label="autoScale" position="left">
