@@ -1,6 +1,6 @@
 <script>
   import { getData } from "./data.js";
-  import { Gantt, Willow, Tooltip, ContextMenu, Editor, defaultEditorItems, Toolbar  } from "wx-svelte-gantt";
+  import { Gantt, Willow, Tooltip, ContextMenu, Editor, defaultEditorItems, Toolbar, Fullscreen   } from "wx-svelte-gantt";
   import { DatePicker, Field, Locale, Switch } from "wx-svelte-core";
 
   import "./gantt-styles.css";
@@ -107,6 +107,7 @@
     <ContextMenu {api}>
     <Tooltip {api}  content={MyTooltipContent}>
     <Toolbar {api} {items} />
+    <Fullscreen hotkey="ctrl+shift+f">
     <Gantt
       bind:this={api}
       {markers}
@@ -117,6 +118,7 @@
       taskTypes={data.taskTypes}
       {highlightTime}
     />
+    </Fullscreen>
     <Editor {api} />
     </Tooltip>
     </ContextMenu>

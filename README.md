@@ -70,9 +70,8 @@ https://github.com/svar-widgets/gantt/blob/main/svelte/demos/cases/GanttEditorCo
 Add Sub Tasks to a Task (#TODO)
 https://docs.svar.dev/svelte/gantt/samples/#/editor-tasks/willow
 
-
-
-
+Full screen selector and hotkey
+https://github.com/svar-widgets/gantt/blob/main/svelte/demos/cases/GanttFullscreen.svelte
 
 
 ### Fix timeline header to top
