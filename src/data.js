@@ -106,7 +106,14 @@ export const columns = [
       header: "Resources",
       flexgrow: 1,
       align: "center",
-    },    {
+    },
+    {
+      id: "type",
+      header: "TaskType",
+      flexgrow: 1,
+      align: "left",
+    },
+    {
       id: "add-task",
       header: "",
       width: 50,
