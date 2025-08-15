@@ -135,6 +135,24 @@ export const taskTypes = [
     { id: "progress", label: "Progress" },
 ]
 
+export const markers = [
+		{
+			start: new Date(2023, 11, 4),
+			text: "Start Project",
+		},
+		{
+			start: new Date(2023, 11, 12),
+			text: "Today",
+			css: "myMiddleClass",
+		},
+		{
+			start: new Date(2023, 11, 29),
+			text: "End Project",
+			css: "myEndClass",
+		},
+	];
+
+
 // Main data export function
 export function getData() {
   return {
@@ -143,5 +161,6 @@ export function getData() {
     scales,
     columns,
     taskTypes,
+    markers,
   };
 }

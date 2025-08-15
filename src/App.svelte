@@ -49,7 +49,8 @@
         links: currentData.links,
         scales: currentData.scales,
         columns: currentData.columns,
-        taskTypes: currentData.taskTypes
+        taskTypes: currentData.taskTypes,
+        markers: currentData.markers,
       };
 
       console.log("Project data to export:", projectData);
@@ -243,6 +244,7 @@
     console.log("- scales:", data.scales);
     console.log("- columns:", data.columns);
     console.log("- taskTypes:", data.taskTypes);
+    console.log("- markers:", data.markers);
 
     console.log("=== VALIDATION DEBUG END - SUCCESS ===");
     return true;
@@ -310,22 +312,7 @@
 		return "";
 	}
 
-  	const markers = [
-		{
-			start: new Date(2023, 11, 6),
-			text: "Start Project",
-		},
-		{
-			start: new Date(2023, 11, 12),
-			text: "Today",
-			css: "myMiddleClass",
-		},
-		{
-			start: new Date(2023, 11, 29),
-			text: "End Project",
-			css: "myEndClass",
-		},
-	];
+
 
   // Add some debugging using $inspect for Svelte 5
   $inspect("Gantt data:", currentData);
@@ -379,7 +366,7 @@
     <Fullscreen hotkey="ctrl+shift+f">
     <Gantt
       bind:this={api}
-      {markers}
+      markers={currentData.markers}
       tasks={currentData.tasks}
       links={currentData.links}
       scales={currentData.scales}
