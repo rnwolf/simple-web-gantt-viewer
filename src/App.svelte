@@ -9,17 +9,63 @@
 
   // Reactive data state
   let currentData = $state(getData());
+  const initialDates = initializeDatesFromMarkers(currentData.markers);
   let api = $state();
 
-  let start = $state(new Date(2023, 11, 1)),  // Remember in Java script months start at zero
-		end = $state(new Date(2023, 11, 29)),
-    today = $state(new Date(2023, 11, 12)),
+let start = $state(initialDates.start),
+    end = $state(initialDates.end),
+    today = $state(initialDates.today),
 		autoScale = $state(false);
 
   console.log("Latest start date:", start);
 
+// More robust initialization with fallbacks
+function initializeDatesFromMarkers(markers) {
+  const startMarker = markers.find(m => m.text === "Start Project");
+  const endMarker = markers.find(m => m.text === "End Project");
+  const todayMarker = markers.find(m => m.text === "Today");
+
+  return {
+    start: startMarker?.start || new Date(2023, 11, 1),
+    end: endMarker?.start || new Date(2023, 11, 29),
+    today: todayMarker?.start || new Date(2023, 11, 12)
+  };
+}
+
+// Helper function to update a specific marker in currentData
+function updateMarkerByText(markerText, newDate) {
+  const markerIndex = currentData.markers.findIndex(m => m.text === markerText);
+  if (markerIndex !== -1) {
+    currentData.markers[markerIndex] = {
+      ...currentData.markers[markerIndex],
+      start: newDate
+    };
+  }
+}
+
+// DatePicker change handlers
+function handleStartChange({value}) {
+  console.log("Start date changed:", value);
+  start = value;
+  updateMarkerByText("Start Project", value);
+}
+
+function handleEndChange({value}) {
+  console.log("End date changed:", value);
+  end = value;
+  updateMarkerByText("End Project", value);
+}
+
+function handleTodayChange({value}) {
+  console.log("Today date changed:", value);
+  today = value;
+  updateMarkerByText("Today", value);
+}
+
+
   // Hidden file input reference
   let fileInput;
+
 
   // Function to download project data as JSON
   function downloadProjectData() {
@@ -345,17 +391,17 @@
         <div class="bar">
           <Field label="Project Start (YYYY/MM/DD)" position="left">
             {#snippet children({ id })}
-              <DatePicker bind:value={start} {id} format={"%Y/%m/%d"}/>
+              <DatePicker bind:value={start} {id} format={"%Y/%m/%d"} onchange={handleStartChange}/>
             {/snippet}
           </Field>
           <Field label="End" position="left">
             {#snippet children({ id })}
-              <DatePicker bind:value={end} {id} format={"%Y/%m/%d"}/>
+              <DatePicker bind:value={end} {id} format={"%Y/%m/%d"} onchange={handleEndChange}/>
             {/snippet}
           </Field>
           <Field label="Today" position="left">
             {#snippet children({ id })}
-              <DatePicker bind:value={today} {id} format={"%Y/%m/%d"}/>
+              <DatePicker bind:value={today} {id} format={"%Y/%m/%d"} onchange={handleTodayChange}/>
             {/snippet}
           </Field>
           <Field label="autoScale" position="left">
