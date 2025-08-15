@@ -122,11 +122,12 @@
 
         // Update the current data
         currentData = processedData;
+        console.log('currentData updated successfully')
 
         // Clear the Gantt and reload with new data
-        if (api) {
-          api.parse(processedData);
-        }
+        // if (api) {
+        //   api.parse(processedData);
+        // }
 
         console.log('Project loaded successfully:', processedData);
         alert(`Project "${jsonData.metadata?.projectName || 'Unnamed Project'}" loaded successfully!`);
@@ -147,24 +148,103 @@
     event.target.value = '';
   }
 
-  // Function to validate project data structure
+// Function to validate project data structure
   function validateProjectData(data) {
-    if (!data || typeof data !== 'object') return false;
+    console.log("=== VALIDATION DEBUG START ===");
+    console.log("Data to validate:", data);
+    console.log("Data type:", typeof data);
+    console.log("Data is null?", data === null);
+    console.log("Data is undefined?", data === undefined);
+
+    if (!data || typeof data !== 'object') {
+      console.log("❌ Validation failed: data is not an object");
+      console.log("Data value:", data);
+      return false;
+    }
+
+    console.log("✅ Data is object, checking required properties...");
+    console.log("All available properties:", Object.keys(data));
 
     // Check for required properties
     const requiredProps = ['tasks'];
     for (const prop of requiredProps) {
-      if (!data[prop]) return false;
+      console.log(`🔍 Checking for property: ${prop}`);
+      console.log(`Property exists?`, prop in data);
+      console.log(`Property truthy?`, !!data[prop]);
+
+      if (!data[prop]) {
+        console.log(`❌ Validation failed: missing or falsy property ${prop}`);
+        console.log(`Property value:`, data[prop]);
+        console.log(`Property type:`, typeof data[prop]);
+        console.log(`Available properties:`, Object.keys(data));
+        return false;
+      }
+      console.log(`✅ Property ${prop} found and truthy`);
     }
 
     // Validate tasks array
-    if (!Array.isArray(data.tasks)) return false;
+    console.log("🔍 Validating tasks array...");
+    console.log("Tasks value:", data.tasks);
+    console.log("Tasks type:", typeof data.tasks);
+    console.log("Is array?", Array.isArray(data.tasks));
 
-    // Basic task validation
-    for (const task of data.tasks) {
-      if (!task.id || !task.text) return false;
+    if (!Array.isArray(data.tasks)) {
+      console.log("❌ Validation failed: tasks is not an array");
+      console.log("Tasks actual type:", typeof data.tasks);
+      console.log("Tasks value:", data.tasks);
+      return false;
     }
 
+    console.log(`✅ Tasks is array with ${data.tasks.length} items`);
+
+    // Basic task validation - check each task
+    for (let i = 0; i < data.tasks.length; i++) {
+      const task = data.tasks[i];
+      console.log(`🔍 Validating task ${i}:`, task);
+      console.log(`Task ${i} type:`, typeof task);
+      console.log(`Task ${i} keys:`, Object.keys(task || {}));
+
+      if (!task) {
+        console.log(`❌ Task ${i} validation failed: task is null/undefined`);
+        return false;
+      }
+
+      if (typeof task !== 'object') {
+        console.log(`❌ Task ${i} validation failed: task is not an object`);
+        console.log(`Task ${i} type:`, typeof task);
+        console.log(`Task ${i} value:`, task);
+        return false;
+      }
+
+      console.log(`Task ${i} id:`, task.id, `(type: ${typeof task.id})`);
+      console.log(`Task ${i} text:`, task.text, `(type: ${typeof task.text})`);
+
+      if (!task.id) {
+        console.log(`❌ Task ${i} validation failed: missing or falsy id`);
+        console.log(`Task ${i} id value:`, task.id);
+        console.log(`Task ${i} id type:`, typeof task.id);
+        return false;
+      }
+
+      if (!task.text) {
+        console.log(`❌ Task ${i} validation failed: missing or falsy text`);
+        console.log(`Task ${i} text value:`, task.text);
+        console.log(`Task ${i} text type:`, typeof task.text);
+        return false;
+      }
+
+      console.log(`✅ Task ${i} validation passed`);
+    }
+
+    // Additional debugging for other properties
+    console.log("🔍 Other properties in data:");
+    console.log("- metadata:", data.metadata);
+    console.log("- links:", data.links);
+    console.log("- scales:", data.scales);
+    console.log("- columns:", data.columns);
+    console.log("- taskTypes:", data.taskTypes);
+
+    console.log("=== VALIDATION DEBUG END - SUCCESS ===");
     return true;
   }
 

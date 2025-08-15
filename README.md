@@ -74,6 +74,13 @@ Full screen selector and hotkey
 https://github.com/svar-widgets/gantt/blob/main/svelte/demos/cases/GanttFullscreen.svelte
 
 
+Add tool bar
+https://github.com/svar-widgets/toolbar/tree/b0165e8d6f39c5b9ba72e5bc590ea0832f1a6369?tab=readme-ov-file
+https://github.com/svar-widgets/toolbar/blob/main/svelte/demos/cases/BasicInit.svelte
+
+
+
+
 ### Fix timeline header to top
 
 https://forum.svar.dev/d/159-sticky-header-for-timeline-top-bar-in-gantt-chart
