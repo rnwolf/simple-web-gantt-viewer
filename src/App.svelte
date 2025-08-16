@@ -3,6 +3,7 @@
   import { Gantt, Willow, Tooltip, ContextMenu, Editor, defaultEditorItems, Fullscreen   } from "wx-svelte-gantt";
   import { Toolbar } from "wx-svelte-toolbar";
   import { DatePicker, Field, Locale, Switch } from "wx-svelte-core";
+  import CustomTaskForm from "./CustomTaskForm.svelte";
 
   import "./gantt-styles.css";
   import MyTooltipContent from "./MyTooltipContent.svelte";
@@ -19,6 +20,10 @@ let start = $state(initialDates.start),
 
   console.log("Latest start date:", start);
 
+  // Add logging for task state changes
+  let task = $state(null);
+  console.log("Task state changed:", task);
+
 // More robust initialization with fallbacks
 function initializeDatesFromMarkers(markers) {
   const startMarker = markers.find(m => m.text === "Start Project");
@@ -30,6 +35,56 @@ function initializeDatesFromMarkers(markers) {
     end: endMarker?.start || new Date(2023, 11, 29),
     today: todayMarker?.start || new Date(2023, 11, 12)
   };
+}
+
+// Initialize function to set up the custom editor intercept
+function init(api) {
+  console.log("=== GANTT INIT - Setting up custom editor ===");
+  console.log("API object received:", api);
+
+  try {
+    const store = api.getState().tasks;
+    console.log("Store obtained:", store);
+
+    // Intercept the default editor and use our custom form instead
+    api.intercept("show-editor", data => {
+      console.log("show-editor intercepted with data:", data);
+      try {
+        task = store.byId(data.id);
+        //console.log("Found task for editing:", task);
+        console.log("Task state changed:", $state.snapshot(task));
+        return false; // Prevent default editor from opening
+      } catch (error) {
+        console.error("Error getting task by ID:", error);
+        return true; // Allow default editor if there's an error
+      }
+    });
+
+    console.log("Custom editor intercept set up successfully");
+  } catch (error) {
+    console.error("Error setting up custom editor:", error);
+  }
+}
+
+// Form action handler (simplified based on official example)
+function formAction(ev) {
+  console.log("=== FORM ACTION ===", ev);
+  const { action, data } = ev;
+
+  switch (action) {
+    case "close-form":
+      console.log("Closing form");
+      task = null;
+      break;
+    default:
+      console.log("Executing action through API:", action, data);
+      if (api && api.exec) {
+        api.exec(action, data); // "update-task", "delete-task" actions
+      } else {
+        console.error("API not available for action:", action);
+      }
+      break;
+  }
 }
 
 // Helper function to update a specific marker in currentData
@@ -420,6 +475,7 @@ function handleTodayChange({value}) {
     <Fullscreen hotkey="ctrl+shift+f">
     <Gantt
       bind:this={api}
+      {init}
       markers={currentData.markers}
       tasks={currentData.tasks}
       links={currentData.links}
@@ -432,8 +488,17 @@ function handleTodayChange({value}) {
 			{start}
 			{end}
     />
+
+    {#if task}
+    <CustomTaskForm
+      {task}
+      taskTypes={currentData.taskTypes}
+      onaction={formAction}
+    />
+    {/if}
+
     </Fullscreen>
-    <Editor {api} />
+    <!-- <Editor {api} /> -->
     </Tooltip>
     </ContextMenu>
     </Willow>
