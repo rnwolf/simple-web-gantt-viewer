@@ -79,6 +79,9 @@ https://github.com/svar-widgets/toolbar/tree/b0165e8d6f39c5b9ba72e5bc590ea0832f1
 https://github.com/svar-widgets/toolbar/blob/main/svelte/demos/cases/BasicInit.svelte
 
 
+Add Zoom scales Hours <-> Days <-> Weeks <-> Months <-> Quarters <-> Years
+https://docs.svar.dev/svelte/gantt/api/properties/zoom
+
 
 
 ### Fix timeline header to top
