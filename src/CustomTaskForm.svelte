@@ -1,3 +1,5 @@
+// Enhanced CustomTaskForm.svelte with proper ID handling
+
 <script>
 	import { onMount } from "svelte";
 	import {
@@ -15,9 +17,13 @@
 		left = $state(),
 		top = $state();
 
+	// Store original ID to track changes
+	let originalId = $state(task?.id);
+
 	onMount(() => {
 		left = (window.innerWidth - node.offsetWidth) / 2;
 		top = (window.innerHeight - node.offsetHeight) / 2;
+		originalId = task?.id;
 	});
 
 	function deleteTask() {
@@ -29,8 +35,33 @@
 		onaction && onaction({ action: "close-form" });
 	}
 
+	// Enhanced ID handling function
+	function handleIdChange(newId) {
+		const oldId = task.id;
+		console.log(`Attempting to change ID from ${oldId} to ${newId}`);
+
+		// Check if the new ID is different and valid
+		if (newId && newId !== oldId) {
+			// Use the custom action to handle ID updates properly
+			onaction && onaction({
+				action: "update-task-id",
+				data: {
+					oldId: oldId,
+					newId: newId,
+					task: { ...task, id: newId }
+				}
+			});
+		}
+	}
+
 	function handleChange({ value }, key) {
 		console.log(`Handling change: ${key} = ${value}`);
+
+		// Special handling for ID changes
+		if (key === "id") {
+			handleIdChange(value);
+			return; // Don't continue with normal update
+		}
 
 		if (key === "type" && value === "milestone") {
 			delete task.end;
@@ -44,12 +75,6 @@
 		// Handle numeric fields - convert string input to numbers
 		if (key === "duration" || key === "optimistic" || key === "pessimistic") {
 			value = parseInt(value) || 0;
-		}
-
-		// Handle ID changes - ensure it's a string or number
-		if (key === "id") {
-			// Convert to number if it's numeric, otherwise keep as string
-			value = isNaN(value) ? value : parseInt(value);
 		}
 
 		// Update the task object
@@ -99,7 +124,7 @@
 			});
 	}
 
-	// Task type options - make sure this matches your taskTypes from data.js
+	// Task type options
 	const typeOptions = taskTypes?.map(type => ({
 		id: type.id,
 		label: type.label
@@ -109,6 +134,11 @@
 		{ id: "milestone", label: "Milestone" },
 		{ id: "urgent", label: "Urgent" },
 	];
+
+	// Helper function to check if ID is temporary
+	function isTemporaryId(id) {
+		return typeof id === 'string' && id.startsWith('temp://');
+	}
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -117,22 +147,33 @@
 	<div class="modal" style="left:{left}px;top:{top}px" bind:this={node}>
 		<div class="header">
 			<h3 class="title">Edit Task</h3>
+			{#if isTemporaryId(task?.id)}
+				<span class="temp-id-badge">Temporary ID</span>
+			{/if}
 			<i class="close wxi-close" onclick={onClose}></i>
 		</div>
 		<div class="body">
-			<!-- Task ID - Make it editable -->
+			<!-- Task ID - Display only, not editable -->
 			<Field label="Task ID">
 				{#snippet children({ id })}
-					<Text
-						{id}
-						value={task?.id || ""}
-						placeholder="Enter task ID"
-						onchange={ev => handleChange(ev, "id")}
-					/>
+					<div class="id-display-container">
+						<div class="id-display {isTemporaryId(task?.id) ? 'temp-id-display' : 'permanent-id-display'}">
+							{task?.id || "No ID"}
+						</div>
+						{#if isTemporaryId(task?.id)}
+							<small class="id-help">
+								This is a temporary ID. It will be converted to a permanent ID when you save and reload the project.
+							</small>
+						{:else}
+							<small class="id-help">
+								Task IDs cannot be changed after creation.
+							</small>
+						{/if}
+					</div>
 				{/snippet}
 			</Field>
 
-			<!-- Basic Task Information -->
+			<!-- Rest of your existing form fields... -->
 			<Field label="Task Name">
 				{#snippet children({ id })}
 					<Text
@@ -154,7 +195,6 @@
 				{/snippet}
 			</Field>
 
-			<!-- Task Type -->
 			<Field label="Task Type">
 				{#snippet children({ id })}
 					<Select
@@ -166,7 +206,6 @@
 				{/snippet}
 			</Field>
 
-			<!-- Dates and Duration -->
 			<Field label="Start Date">
 				{#snippet children({ id })}
 					<DatePicker
@@ -212,7 +251,6 @@
 				</Field>
 			{/if}
 
-			<!-- Custom Fields for Your Project -->
 			<Field label="Resources">
 				{#snippet children({ id })}
 					<Text
@@ -248,7 +286,6 @@
 				</Field>
 			{/if}
 
-			<!-- Action Buttons -->
 			<div class="button-group">
 				<button class="button primary" onclick={onClose}>Save & Close</button>
 				<button class="button danger" onclick={deleteTask}>Delete Task</button>
@@ -299,6 +336,15 @@
 		font-weight: 600;
 	}
 
+	.temp-id-badge {
+		background: #ff9800;
+		color: white;
+		padding: 2px 8px;
+		border-radius: 12px;
+		font-size: 11px;
+		font-weight: 500;
+	}
+
 	.close {
 		cursor: pointer;
 		font-weight: 700;
@@ -315,6 +361,40 @@
 		display: flex;
 		flex-direction: column;
 		gap: 15px;
+	}
+
+	.id-display-container {
+		display: flex;
+		flex-direction: column;
+		gap: 5px;
+	}
+
+	.id-display {
+		padding: 8px 12px;
+		border: 2px solid #e0e0e0;
+		border-radius: 4px;
+		background: #f8f9fa;
+		font-family: monospace;
+		font-size: 14px;
+		color: #495057;
+	}
+
+	.temp-id-display {
+		border-color: #ff9800;
+		background: #fff3e0;
+		color: #f57c00;
+	}
+
+	.permanent-id-display {
+		border-color: #28a745;
+		background: #d4edda;
+		color: #155724;
+	}
+
+	.id-help {
+		color: #666;
+		font-size: 12px;
+		font-style: italic;
 	}
 
 	.button-group {
