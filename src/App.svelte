@@ -236,7 +236,6 @@ function createFreshProject() {
 }
 
 
-
 // Enhanced form action with comprehensive ID management
 function formAction(ev) {
   console.log("=== FORM ACTION ===", ev);
@@ -394,9 +393,9 @@ function handleBatchIdCleanup() {
   downloadProjectDataWithCleanup();
 }
 
-// Enhanced download function with mandatory cleanup option
+// Enhanced download function with actual ID replacement (not just mapping)
 function downloadProjectDataWithCleanup() {
-  console.log("downloadProjectData with cleanup called");
+  console.log("downloadProjectData with temp ID cleanup called");
 
   try {
     // Get current data
@@ -423,10 +422,23 @@ function downloadProjectDataWithCleanup() {
       markers: currentData.markers,
     };
 
-    // Check for temporary IDs
-    const tempTasks = projectData.tasks.filter(task =>
-      typeof task.id === 'string' && task.id.startsWith('temp://')
-    );
+    // Check for temporary IDs (search recursively through nested data)
+    function findTempTasksRecursively(tasks, allTempTasks = []) {
+      tasks.forEach(task => {
+        // Check if this task has a temporary ID
+        if (typeof task.id === 'string' && task.id.startsWith('temp://')) {
+          allTempTasks.push(task);
+        }
+        
+        // Recursively check nested data
+        if (task.data && Array.isArray(task.data)) {
+          findTempTasksRecursively(task.data, allTempTasks);
+        }
+      });
+      return allTempTasks;
+    }
+    
+    const tempTasks = findTempTasksRecursively(projectData.tasks);
 
     if (tempTasks.length > 0) {
       console.log(`Found ${tempTasks.length} temporary IDs, cleaning up...`);
@@ -450,32 +462,61 @@ function downloadProjectDataWithCleanup() {
 
       console.log("ID mapping for export:", Array.from(idMapping.entries()));
 
-      // Apply mapping to tasks
-      projectData.tasks = projectData.tasks.map(task => {
-        const updatedTask = { ...task };
+      // ACTUALLY REPLACE the IDs in tasks (not just create mapping)
+      // This function recursively processes nested task data
+      function replaceIdsInTasksRecursively(tasks, idMapping, depth = 0) {
+        const indent = '  '.repeat(depth);
+        console.log(`${indent}=== PROCESSING TASKS AT DEPTH ${depth} ===`);
+        
+        return tasks.map(task => {
+          const updatedTask = { ...task };
 
-        if (idMapping.has(task.id)) {
-          updatedTask.id = idMapping.get(task.id);
-        }
+          // Replace task ID if it's temporary
+          if (idMapping.has(task.id)) {
+            const oldId = task.id;
+            updatedTask.id = idMapping.get(task.id);
+            console.log(`${indent}✅ Replaced task ID: ${oldId} → ${updatedTask.id} (${task.text})`);
+          } else {
+            console.log(`${indent}⏭️  Keeping task ID: ${task.id} (${task.text})`);
+          }
 
-        if (task.parent && idMapping.has(task.parent)) {
-          updatedTask.parent = idMapping.get(task.parent);
-        }
+          // Replace parent reference if it's temporary
+          if (task.parent && idMapping.has(task.parent)) {
+            const oldParent = task.parent;
+            updatedTask.parent = idMapping.get(task.parent);
+            console.log(`${indent}✅ Replaced parent reference: ${oldParent} → ${updatedTask.parent} for task ${task.text}`);
+          }
 
-        return updatedTask;
-      });
+          // RECURSIVELY process nested data array if it exists
+          if (task.data && Array.isArray(task.data) && task.data.length > 0) {
+            console.log(`${indent}🔄 Processing ${task.data.length} nested tasks in ${task.text}`);
+            updatedTask.data = replaceIdsInTasksRecursively(task.data, idMapping, depth + 1);
+          }
 
-      // Apply mapping to links
+          return updatedTask;
+        });
+      }
+      
+      console.log("=== BEFORE TASK ID REPLACEMENT ===");
+      console.log("Original top-level tasks:", projectData.tasks.map(t => `${t.id} (${t.text})`));
+      console.log("ID mapping:", Array.from(idMapping.entries()));
+      console.log("=== STARTING RECURSIVE REPLACEMENT ===");
+      
+      projectData.tasks = replaceIdsInTasksRecursively(projectData.tasks, idMapping);
+
+      // ACTUALLY REPLACE IDs in links (not just create mapping)
       if (projectData.links) {
         projectData.links = projectData.links.map(link => {
           const updatedLink = { ...link };
 
           if (idMapping.has(link.source)) {
             updatedLink.source = idMapping.get(link.source);
+            console.log(`Replaced link source: ${link.source} → ${updatedLink.source}`);
           }
 
           if (idMapping.has(link.target)) {
             updatedLink.target = idMapping.get(link.target);
+            console.log(`Replaced link target: ${link.target} → ${updatedLink.target}`);
           }
 
           return updatedLink;
@@ -483,7 +524,7 @@ function downloadProjectDataWithCleanup() {
       }
 
       projectData.metadata.cleanedIds = true;
-      projectData.metadata.idMapping = Array.from(idMapping.entries());
+      // DO NOT store the mapping in the exported file - 3rd party systems don't need it
 
       // Show mapping details
       let mappingMessage = `Cleaned ${tempTasks.length} temporary IDs:\n\n`;
@@ -491,7 +532,23 @@ function downloadProjectDataWithCleanup() {
         const taskName = tempTasks.find(t => t.id === oldId)?.text || 'Unknown';
         mappingMessage += `• ${taskName}: ${oldId} → ${newId}\n`;
       }
-      console.log(mappingMessage);
+      console.log("ID replacement completed:", mappingMessage);
+
+      // Verify that no temporary IDs remain (search recursively)
+      const remainingTempIds = findTempTasksRecursively(projectData.tasks);
+
+      console.log("=== VERIFICATION AFTER ID REPLACEMENT ===");
+      console.log("Original temp tasks:", tempTasks.map(t => `${t.id} (${t.text})`));
+      console.log("Updated task IDs:", projectData.tasks.map(t => `${t.id} (${t.text})`));
+      console.log("Remaining temp IDs:", remainingTempIds.map(t => t.id));
+      console.log("=== END VERIFICATION ===");
+
+      if (remainingTempIds.length > 0) {
+        console.error("ERROR: Temporary IDs still remain after cleanup:", remainingTempIds.map(t => t.id));
+        throw new Error(`Failed to clean all temporary IDs. ${remainingTempIds.length} remain.`);
+      } else {
+        console.log("✅ All temporary IDs successfully replaced");
+      }
     }
 
     // Create and download file
@@ -513,7 +570,7 @@ function downloadProjectDataWithCleanup() {
     URL.revokeObjectURL(url);
 
     const successMessage = hasCleanedIds
-      ? `Project saved with ${tempTasks.length} temporary IDs converted to permanent IDs!\n\nTo use the cleaned data:\n1. Load the saved file\n2. Or restart the application`
+      ? `Project saved with ${tempTasks.length} temporary IDs converted to permanent IDs!\n\nThe saved file contains clean numeric IDs - no temporary IDs remain.\n\nSafe for 3rd party systems to process.`
       : 'Project saved successfully!';
 
     alert(successMessage);
@@ -523,6 +580,7 @@ function downloadProjectDataWithCleanup() {
     alert(`Error saving project data: ${error.message}`);
   }
 }
+
 
 
 // Helper function to update a specific marker in currentData
@@ -731,6 +789,8 @@ function loadProjectData(event) {
   reader.readAsText(file);
   event.target.value = '';
 }
+
+
 
 
 // Enhanced project validation with detailed feedback
