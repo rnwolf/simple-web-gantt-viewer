@@ -9,6 +9,12 @@ import {
   validateProjectForImport
 } from './utils/idValidation.js';
 
+import {
+  flattenProjectData,
+  cleanupTemporaryIds,
+  cleanupLinksIds
+} from './flattenProjectData.js';
+
   import { getData } from "./data.js";
   import { Gantt, Willow, Tooltip, ContextMenu, Editor, defaultEditorItems, Fullscreen   } from "wx-svelte-gantt";
   import { Toolbar } from "wx-svelte-toolbar";
@@ -22,6 +28,7 @@ import {
   let currentData = $state(getData());
   const initialDates = initializeDatesFromMarkers(currentData.markers);
   let api = $state();
+
 
 let start = $state(initialDates.start),
     end = $state(initialDates.end),
@@ -57,6 +64,10 @@ function init(api) {
     // Intercept the default editor and use our custom form instead
     api.intercept("show-editor", data => {
       console.log("show-editor intercepted with data:", data);
+
+      // Expose the API globally for debugging
+      window.ganttApi = api;
+      console.log("Gantt API exposed globally as window.ganttApi");
 
       try {
         // Try multiple methods to get the task data
@@ -236,6 +247,91 @@ function createFreshProject() {
 }
 
 
+// Gantt event handlers to sync changes back to currentData and API
+function handleTaskUpdate(event) {
+  console.log("=== TASK UPDATE EVENT ===", event);
+  const { id, task: updatedTask } = event;
+
+  try {
+    // Find and update the task in currentData
+    const taskIndex = currentData.tasks.findIndex(t => t.id === id);
+    if (taskIndex !== -1) {
+      // Update currentData with the new task properties
+      currentData.tasks[taskIndex] = { 
+        ...currentData.tasks[taskIndex], 
+        ...updatedTask, 
+        // Ensure we preserve the ID
+        id: id 
+      };
+      console.log(`✅ Updated task ${id} in currentData:`, updatedTask);
+    } else {
+      console.warn(`⚠️ Task ${id} not found in currentData.tasks`);
+    }
+
+    // TODO: Here you would typically make an API call to your backend
+    // Example: await updateTaskInAPI(id, updatedTask);
+    console.log(`🔄 Would sync task ${id} to backend:`, updatedTask);
+
+  } catch (error) {
+    console.error('❌ Error handling task update:', error);
+  }
+}
+
+function handleTaskMove(event) {
+  console.log("=== TASK MOVE EVENT ===", event);
+  const { id, start, duration } = event;
+
+  try {
+    // Find and update the task in currentData  
+    const taskIndex = currentData.tasks.findIndex(t => t.id === id);
+    if (taskIndex !== -1) {
+      currentData.tasks[taskIndex] = { 
+        ...currentData.tasks[taskIndex], 
+        start: new Date(start),
+        duration: duration
+      };
+      console.log(`✅ Moved task ${id} in currentData: start=${start}, duration=${duration}`);
+    } else {
+      console.warn(`⚠️ Task ${id} not found in currentData.tasks for move`);
+    }
+
+    // TODO: Here you would typically make an API call to your backend
+    // Example: await moveTaskInAPI(id, start, duration);
+    console.log(`🔄 Would sync task move ${id} to backend:`, { start, duration });
+
+  } catch (error) {
+    console.error('❌ Error handling task move:', error);
+  }
+}
+
+function handleTaskResize(event) {
+  console.log("=== TASK RESIZE EVENT ===", event);
+  const { id, duration, start } = event;
+
+  try {
+    // Find and update the task in currentData
+    const taskIndex = currentData.tasks.findIndex(t => t.id === id);
+    if (taskIndex !== -1) {
+      currentData.tasks[taskIndex] = { 
+        ...currentData.tasks[taskIndex], 
+        duration: duration,
+        // Also update start if provided (some resize events might change start)
+        ...(start && { start: new Date(start) })
+      };
+      console.log(`✅ Resized task ${id} in currentData: duration=${duration}`);
+    } else {
+      console.warn(`⚠️ Task ${id} not found in currentData.tasks for resize`);
+    }
+
+    // TODO: Here you would typically make an API call to your backend
+    // Example: await resizeTaskInAPI(id, duration, start);
+    console.log(`🔄 Would sync task resize ${id} to backend:`, { duration, start });
+
+  } catch (error) {
+    console.error('❌ Error handling task resize:', error);
+  }
+}
+
 // Enhanced form action with comprehensive ID management
 function formAction(ev) {
   console.log("=== FORM ACTION ===", ev);
@@ -398,13 +494,39 @@ function downloadProjectDataWithCleanup() {
   console.log("downloadProjectData with temp ID cleanup called");
 
   try {
-    // Get current data
-    let currentTasks;
-    if (api && api.serialize) {
-      currentTasks = api.serialize();
-    } else {
-      currentTasks = currentData.tasks;
-    }
+    // Use currentData.tasks directly (clean structure, no nested data arrays)
+    const currentTasks = currentData.tasks;
+    console.log("Using currentData.tasks (clean structure):", currentTasks.length, "tasks");
+
+    console.log("api:", api);
+    console.log("api.serialize:", api && api.serialize);
+
+    let allTasks;
+    allTasks = api.serialize();
+
+    // Make a deep copy so we don't mutate live data
+    let allTasksCopy = JSON.parse(JSON.stringify(allTasks));
+
+    // Make a deep copy of links to avoid mutating original data
+    let linksCopy = JSON.parse(JSON.stringify(currentData.links));
+
+    console.log("All tasks (flat list):", allTasksCopy);
+
+    // ...after you have allTasks... remove any duplicates in the nested data
+    allTasksCopy.forEach(task => {
+        delete task.data;
+        delete task["$x"];
+        delete task["$y"];
+        delete task["$w"];
+        delete task["$h"];
+    });
+    console.log("All tasks less nested data elements:", allTasksCopy);
+
+
+    const tempTasks = allTasksCopy.filter(
+      task => typeof task.id === 'string' && task.id.startsWith('temp:')
+    );
+    console.log("All temp tasks (flat list):", tempTasks);
 
     // Create project data
     let projectData = {
@@ -415,30 +537,14 @@ function downloadProjectDataWithCleanup() {
         cleanedIds: false
       },
       tasks: currentTasks,
-      links: currentData.links,
+      links: linksCopy, // Use deep copy here
       scales: currentData.scales,
       columns: currentData.columns,
       taskTypes: currentData.taskTypes,
       markers: currentData.markers,
     };
 
-    // Check for temporary IDs (search recursively through nested data)
-    function findTempTasksRecursively(tasks, allTempTasks = []) {
-      tasks.forEach(task => {
-        // Check if this task has a temporary ID
-        if (typeof task.id === 'string' && task.id.startsWith('temp://')) {
-          allTempTasks.push(task);
-        }
-        
-        // Recursively check nested data
-        if (task.data && Array.isArray(task.data)) {
-          findTempTasksRecursively(task.data, allTempTasks);
-        }
-      });
-      return allTempTasks;
-    }
-    
-    const tempTasks = findTempTasksRecursively(projectData.tasks);
+    console.log(`Found ${tempTasks.length} temporary IDs:`, tempTasks.map(t => `${t.id} (${t.text})`));
 
     if (tempTasks.length > 0) {
       console.log(`Found ${tempTasks.length} temporary IDs, cleaning up...`);
@@ -467,7 +573,7 @@ function downloadProjectDataWithCleanup() {
       function replaceIdsInTasksRecursively(tasks, idMapping, depth = 0) {
         const indent = '  '.repeat(depth);
         console.log(`${indent}=== PROCESSING TASKS AT DEPTH ${depth} ===`);
-        
+
         return tasks.map(task => {
           const updatedTask = { ...task };
 
@@ -496,18 +602,24 @@ function downloadProjectDataWithCleanup() {
           return updatedTask;
         });
       }
-      
+
       console.log("=== BEFORE TASK ID REPLACEMENT ===");
       console.log("Original top-level tasks:", projectData.tasks.map(t => `${t.id} (${t.text})`));
       console.log("ID mapping:", Array.from(idMapping.entries()));
       console.log("=== STARTING RECURSIVE REPLACEMENT ===");
-      
-      projectData.tasks = replaceIdsInTasksRecursively(projectData.tasks, idMapping);
+
+      projectData.tasks = replaceIdsInTasksRecursively(allTasksCopy, idMapping);
 
       // ACTUALLY REPLACE IDs in links (not just create mapping)
       if (projectData.links) {
         projectData.links = projectData.links.map(link => {
           const updatedLink = { ...link };
+
+
+          // if (idMapping.has(link.id)) {
+          //   updatedLink.id = idMapping.get(link.id);
+          //   console.log(`Replaced link id: ${link.id} → ${updatedLink.id}`);
+          // }
 
           if (idMapping.has(link.source)) {
             updatedLink.source = idMapping.get(link.source);
@@ -523,6 +635,14 @@ function downloadProjectDataWithCleanup() {
         });
       }
 
+      // After all other link processing (e.g., replacing source/target IDs)
+      if (projectData.links) {
+        projectData.links = projectData.links.map((link, idx) => {
+          // Assign sequential integer IDs starting from 1
+          return { ...link, id: idx + 1 };
+        });
+      }
+
       projectData.metadata.cleanedIds = true;
       // DO NOT store the mapping in the exported file - 3rd party systems don't need it
 
@@ -534,8 +654,10 @@ function downloadProjectDataWithCleanup() {
       }
       console.log("ID replacement completed:", mappingMessage);
 
-      // Verify that no temporary IDs remain (search recursively)
-      const remainingTempIds = findTempTasksRecursively(projectData.tasks);
+      // Verify that no temporary IDs remain (simple check for flat structure)
+      const remainingTempIds = projectData.tasks.filter(task =>
+        typeof task.id === 'string' && task.id.startsWith('temp://')
+      );
 
       console.log("=== VERIFICATION AFTER ID REPLACEMENT ===");
       console.log("Original temp tasks:", tempTasks.map(t => `${t.id} (${t.text})`));
@@ -574,6 +696,12 @@ function downloadProjectDataWithCleanup() {
       : 'Project saved successfully!';
 
     alert(successMessage);
+
+    // Convert date strings back to Date objects
+    const processedData = processLoadedData(projectData);
+
+    // Update the current data - this will cause Gantt to reloaded with updated ids
+    currentData = processedData;
 
   } catch (error) {
     console.error('Error downloading project data:', error);
@@ -1192,6 +1320,10 @@ function debugApiMethods() {
 			zoom={zoomConfig}
 			{start}
 			{end}
+      on:update-task={handleTaskUpdate}
+      on:move-task={handleTaskMove}
+      on:resize-task={handleTaskResize}
+      on:after-task-drag={handleTaskMove}
     />
 
     {#if task}
