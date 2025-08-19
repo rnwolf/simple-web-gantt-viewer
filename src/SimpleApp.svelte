@@ -1,6 +1,5 @@
 <script>
-  import { Gantt, Willow, Tooltip, ContextMenu, Fullscreen } from "wx-svelte-gantt";
-  import { Toolbar } from "wx-svelte-toolbar";
+  import { Gantt, Willow, Tooltip, ContextMenu, Fullscreen, Toolbar, Editor } from "wx-svelte-gantt";
   import { DatePicker, Field, Locale, Switch } from "wx-svelte-core";
   import SimpleCustomTaskForm from "./SimpleCustomTaskForm.svelte";
   import "./gantt-styles.css";
@@ -16,7 +15,8 @@
         duration: 8,
         text: "Project Root",
         progress: 60,
-        type: "summary"
+        type: "summary",
+        details: "Main project container with all tasks"
       },
       {
         id: 2,
@@ -25,7 +25,9 @@
         duration: 4,
         text: "Task 1",
         progress: 80,
-        type: "task"
+        type: "task",
+        resources: "R001, R002",
+        details: "First phase of the project work"
       },
       {
         id: 3,
@@ -34,7 +36,9 @@
         duration: 4,
         text: "Task 2",
         progress: 40,
-        type: "task"
+        type: "task",
+        resources: "R003",
+        details: "Second phase following Task 1"
       }
     ],
     links: [
@@ -61,7 +65,8 @@
   const columns = [
     { id: "text", header: "Task name", flexgrow: 2 },
     { id: "start", header: "Start date", flexgrow: 1, align: "center" },
-    { id: "duration", header: "Duration", align: "center", flexgrow: 1 }
+    { id: "duration", header: "Duration", align: "center", flexgrow: 1 },
+    { id: "resources", header: "Resources", flexgrow: 1, align: "center" }
   ];
 
   const taskTypes = [
@@ -70,28 +75,46 @@
     { id: "milestone", label: "Milestone" }
   ];
 
-  // Initialize - just intercept the editor
+  // Function to add a new task
+  function addNewTask(parentId = null) {
+    if (!api) {
+      alert("Gantt not ready");
+      return;
+    }
+
+    try {
+      // Generate a temporary ID
+      const tempId = `temp://${Date.now()}`;
+      
+      // Create a new task
+      const newTask = {
+        id: tempId,
+        text: "New Task",
+        start: new Date(),
+        duration: 1,
+        progress: 0,
+        type: "task",
+        parent: parentId
+      };
+
+      // Add the task using the API
+      api.exec("add-task", { task: newTask });
+      
+      console.log("Added new task:", newTask);
+    } catch (error) {
+      console.error("Error adding new task:", error);
+      alert(`Error adding new task: ${error.message}`);
+    }
+  }
+
+  // Initialize - simple setup without intercepting the editor
   function init(api) {
     console.log("Initializing simple Gantt");
     
-    api.intercept("show-editor", data => {
-      console.log("Opening custom editor for task:", data.id);
-      
-      // Get task data directly from API
-      try {
-        const tasks = api.serialize();
-        const foundTask = tasks.find(t => t.id === data.id);
-        
-        if (foundTask) {
-          task = foundTask;
-          return false; // Prevent default editor
-        }
-      } catch (error) {
-        console.error("Error finding task:", error);
-      }
-      
-      return true; // Allow default editor if we can't find the task
-    });
+    // Expose the addNewTask function globally so it can be called
+    window.addNewTask = addNewTask;
+    
+    console.log("Simple Gantt initialization completed - built-in editor enabled");
   }
 
   // Form actions - work directly with API
@@ -391,7 +414,20 @@
 
       <ContextMenu {api}>
         <Tooltip {api} content={MyTooltipContent}>
-          <Toolbar {items} />
+          <div class="toolbar-container">
+            <Toolbar {api} />
+            <div class="custom-toolbar">
+              <button class="toolbar-btn save" onclick={saveProject} title="Save Project">
+                📁 Save
+              </button>
+              <button class="toolbar-btn load" onclick={triggerFileLoad} title="Load Project">
+                📂 Load
+              </button>
+              <button class="toolbar-btn new" onclick={createNewProject} title="New Project">
+                📄 New
+              </button>
+            </div>
+          </div>
           <Fullscreen hotkey="ctrl+shift+f">
             <Gantt
               bind:this={api}
@@ -406,17 +442,8 @@
               {start}
               {end}
             />
-
-            {#if task}
-              <SimpleCustomTaskForm
-                {task}
-                {taskTypes}
-                allTasks={api ? api.serialize() : []}
-                allLinks={currentProjectData.links}
-                onaction={formAction}
-              />
-            {/if}
           </Fullscreen>
+          <Editor {api} />
         </Tooltip>
       </ContextMenu>
     </Willow>
@@ -455,5 +482,107 @@
 
   :global(.wx-gantt .myEndClass) {
     background-color: rgba(54, 206, 124, 0.77);
+  }
+
+  /* Add task button styling */
+  :global(.add-task-button) {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 0 auto;
+    transition: all 0.2s ease;
+  }
+
+  :global(.add-task-button:hover) {
+    background-color: #0056b3;
+    transform: scale(1.1);
+  }
+
+  :global(.add-task-button:active) {
+    transform: scale(0.95);
+  }
+
+  /* Toolbar container styling */
+  .toolbar-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-bottom: var(--wx-gantt-border);
+    background-color: var(--wx-background, #f8f9fa);
+  }
+
+  .custom-toolbar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .toolbar-btn {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    color: #333;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .toolbar-btn:hover {
+    background-color: #f5f5f5;
+    border-color: #999;
+    transform: translateY(-1px);
+  }
+
+  .toolbar-btn:active {
+    transform: translateY(0);
+    background-color: #e9e9e9;
+  }
+
+  .toolbar-btn.save {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+  }
+
+  .toolbar-btn.save:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+  }
+
+  .toolbar-btn.load {
+    background-color: #28a745;
+    color: white;
+    border-color: #28a745;
+  }
+
+  .toolbar-btn.load:hover {
+    background-color: #1e7e34;
+    border-color: #1e7e34;
+  }
+
+  .toolbar-btn.new {
+    background-color: #6c757d;
+    color: white;
+    border-color: #6c757d;
+  }
+
+  .toolbar-btn.new:hover {
+    background-color: #545b62;
+    border-color: #545b62;
   }
 </style>
