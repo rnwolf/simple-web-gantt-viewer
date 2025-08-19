@@ -15,7 +15,7 @@ import {
   cleanupLinksIds
 } from './flattenProjectData.js';
 
-  import { getData } from "./data.js";
+  import { getData, updateTaskAPI, saveProjectData, clearSavedData } from "./data.js";
   import { Gantt, Willow, Tooltip, ContextMenu, Editor, defaultEditorItems, Fullscreen   } from "wx-svelte-gantt";
   import { Toolbar } from "wx-svelte-toolbar";
   import { DatePicker, Field, Locale, Switch } from "wx-svelte-core";
@@ -248,7 +248,7 @@ function createFreshProject() {
 
 
 // Gantt event handlers to sync changes back to currentData and API
-function handleTaskUpdate(event) {
+async function handleTaskUpdate(event) {
   console.log("=== TASK UPDATE EVENT ===", event);
   const { id, task: updatedTask } = event;
 
@@ -268,16 +268,21 @@ function handleTaskUpdate(event) {
       console.warn(`⚠️ Task ${id} not found in currentData.tasks`);
     }
 
-    // TODO: Here you would typically make an API call to your backend
-    // Example: await updateTaskInAPI(id, updatedTask);
-    console.log(`🔄 Would sync task ${id} to backend:`, updatedTask);
+    // Save to "backend" (localStorage simulation)
+    try {
+      const result = await updateTaskAPI(id, updatedTask, currentData);
+      console.log(`🔄 Task ${id} synced to backend:`, result);
+    } catch (apiError) {
+      console.error(`❌ Failed to sync task ${id} to backend:`, apiError);
+      // Optionally show user error notification
+    }
 
   } catch (error) {
     console.error('❌ Error handling task update:', error);
   }
 }
 
-function handleTaskMove(event) {
+async function handleTaskMove(event) {
   console.log("=== TASK MOVE EVENT ===", event);
   const { id, start, duration } = event;
 
@@ -295,16 +300,21 @@ function handleTaskMove(event) {
       console.warn(`⚠️ Task ${id} not found in currentData.tasks for move`);
     }
 
-    // TODO: Here you would typically make an API call to your backend
-    // Example: await moveTaskInAPI(id, start, duration);
-    console.log(`🔄 Would sync task move ${id} to backend:`, { start, duration });
+    // Save to "backend" (localStorage simulation)
+    try {
+      const result = await updateTaskAPI(id, { start: new Date(start), duration }, currentData);
+      console.log(`🔄 Task move ${id} synced to backend:`, result);
+    } catch (apiError) {
+      console.error(`❌ Failed to sync task move ${id} to backend:`, apiError);
+      // Optionally show user error notification
+    }
 
   } catch (error) {
     console.error('❌ Error handling task move:', error);
   }
 }
 
-function handleTaskResize(event) {
+async function handleTaskResize(event) {
   console.log("=== TASK RESIZE EVENT ===", event);
   const { id, duration, start } = event;
 
@@ -323,17 +333,68 @@ function handleTaskResize(event) {
       console.warn(`⚠️ Task ${id} not found in currentData.tasks for resize`);
     }
 
-    // TODO: Here you would typically make an API call to your backend
-    // Example: await resizeTaskInAPI(id, duration, start);
-    console.log(`🔄 Would sync task resize ${id} to backend:`, { duration, start });
+    // Save to "backend" (localStorage simulation)
+    try {
+      const updates = { duration };
+      if (start) updates.start = new Date(start);
+      const result = await updateTaskAPI(id, updates, currentData);
+      console.log(`🔄 Task resize ${id} synced to backend:`, result);
+    } catch (apiError) {
+      console.error(`❌ Failed to sync task resize ${id} to backend:`, apiError);
+      // Optionally show user error notification
+    }
 
   } catch (error) {
     console.error('❌ Error handling task resize:', error);
   }
 }
 
+// Handle task updates from the custom form
+async function handleTaskUpdateFromForm(data) {
+  console.log("=== TASK UPDATE FROM FORM ===", data);
+  const { id, task: updatedTask } = data;
+
+  try {
+    // Step 1: Update the visual Gantt via the API
+    if (api && api.exec) {
+      console.log(`🎨 Updating Gantt visual for task ${id}`);
+      api.exec("update-task", { id, task: updatedTask });
+    }
+
+    // Step 2: Update currentData 
+    const taskIndex = currentData.tasks.findIndex(t => t.id === id);
+    if (taskIndex !== -1) {
+      currentData.tasks[taskIndex] = { 
+        ...currentData.tasks[taskIndex], 
+        ...updatedTask, 
+        id: id 
+      };
+      console.log(`✅ Updated task ${id} in currentData:`, currentData.tasks[taskIndex]);
+    } else {
+      console.warn(`⚠️ Task ${id} not found in currentData.tasks`);
+    }
+
+    // Step 3: Persist to localStorage (simulate backend API)
+    try {
+      const result = await updateTaskAPI(id, updatedTask, currentData);
+      console.log(`🔄 Task ${id} synced to localStorage:`, result);
+    } catch (apiError) {
+      console.error(`❌ Failed to sync task ${id} to localStorage:`, apiError);
+    }
+
+    // Step 4: Update the form task state so it stays in sync
+    if (task && task.id === id) {
+      task = { ...task, ...updatedTask, id };
+      console.log(`📝 Updated form task state for ${id}`);
+    }
+
+  } catch (error) {
+    console.error('❌ Error handling task update from form:', error);
+  }
+}
+
 // Enhanced form action with comprehensive ID management
-function formAction(ev) {
+async function formAction(ev) {
   console.log("=== FORM ACTION ===", ev);
   const { action, data } = ev;
 
@@ -341,6 +402,11 @@ function formAction(ev) {
     case "close-form":
       console.log("Closing form");
       task = null;
+      break;
+
+    case "update-task":
+      console.log("Updating task from form:", data);
+      await handleTaskUpdateFromForm(data);
       break;
 
     case "update-task-id":
@@ -1005,6 +1071,25 @@ function createTestTaskWithTempId() {
 }
 
 
+// Debug function to clear localStorage and reload
+function resetToDefaults() {
+  const confirmed = confirm(
+    "Reset to default data?\n\n" +
+    "This will:\n" +
+    "• Clear all saved data from localStorage\n" +
+    "• Reload with original default tasks\n" +
+    "• Lose any current changes\n\n" +
+    "Continue?"
+  );
+  
+  if (confirmed) {
+    clearSavedData();
+    // Force reload of data from defaults
+    currentData = getData();
+    alert("✅ Reset to default data complete!\n\nAll localStorage data cleared.");
+  }
+}
+
 // Toolbar items
 const items = [
   {
@@ -1030,6 +1115,14 @@ const items = [
     text: "New project",
     type: "secondary",
     handler: createFreshProject,
+  },
+  {
+    id: "reset-data",
+    comp: "button",
+    icon: "wxi-delete",
+    text: "Reset to defaults",
+    type: "secondary",
+    handler: resetToDefaults,
   },
   {
     id: "cleanup-ids",

@@ -160,8 +160,127 @@ export const markers = [
 	];
 
 
-// Main data export function
-export function getData() {
+// API simulation using localStorage for persistence
+const STORAGE_KEY = 'gantt_project_data';
+
+// Save data to localStorage (simulates API call)
+export function saveProjectData(projectData) {
+  try {
+    // Convert dates to ISO strings for storage
+    const storageData = {
+      ...projectData,
+      tasks: projectData.tasks.map(task => ({
+        ...task,
+        start: task.start instanceof Date ? task.start.toISOString() : task.start,
+        end: task.end instanceof Date ? task.end.toISOString() : task.end
+      })),
+      markers: projectData.markers?.map(marker => ({
+        ...marker,
+        start: marker.start instanceof Date ? marker.start.toISOString() : marker.start
+      })) || markers,
+      lastSaved: new Date().toISOString()
+    };
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData));
+    console.log('✅ Project data saved to localStorage');
+    return Promise.resolve({ success: true, timestamp: storageData.lastSaved });
+  } catch (error) {
+    console.error('❌ Failed to save project data:', error);
+    return Promise.reject(error);
+  }
+}
+
+// Load data from localStorage (simulates API call)
+function loadProjectData() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const data = JSON.parse(stored);
+      // Convert date strings back to Date objects
+      return {
+        ...data,
+        tasks: data.tasks.map(task => ({
+          ...task,
+          start: new Date(task.start),
+          end: task.end ? new Date(task.end) : undefined
+        })),
+        markers: data.markers?.map(marker => ({
+          ...marker,
+          start: new Date(marker.start)
+        })) || markers
+      };
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to load saved data, using defaults:', error);
+  }
+  return null;
+}
+
+// API simulation: Update a specific task
+export async function updateTaskAPI(taskId, updates, currentAppData = null) {
+  try {
+    console.log(`🔄 Updating task ${taskId} via API:`, updates);
+    
+    // Load current data - prefer app data over localStorage to handle new tasks
+    let currentData;
+    if (currentAppData && currentAppData.tasks) {
+      // Use the current app state passed from the caller
+      currentData = JSON.parse(JSON.stringify(currentAppData)); // Deep copy
+      console.log(`📱 Using current app data (${currentData.tasks.length} tasks)`);
+    } else {
+      // Fallback to localStorage
+      currentData = loadProjectData() || getDefaultData();
+      console.log(`💾 Using localStorage data (${currentData.tasks.length} tasks)`);
+    }
+    
+    // Find and update the task
+    const taskIndex = currentData.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex !== -1) {
+      // Update existing task
+      currentData.tasks[taskIndex] = {
+        ...currentData.tasks[taskIndex],
+        ...updates,
+        // Ensure dates are Date objects
+        start: updates.start ? new Date(updates.start) : currentData.tasks[taskIndex].start,
+        end: updates.end ? new Date(updates.end) : currentData.tasks[taskIndex].end
+      };
+      
+      console.log(`✅ Updated existing task ${taskId}`);
+    } else {
+      // Task not found - add it as a new task (this handles newly created tasks)
+      const newTask = {
+        id: taskId,
+        ...updates,
+        // Ensure dates are Date objects
+        start: updates.start ? new Date(updates.start) : new Date(),
+        end: updates.end ? new Date(updates.end) : undefined
+      };
+      
+      currentData.tasks.push(newTask);
+      console.log(`➕ Added new task ${taskId} to data`);
+    }
+      
+    // Save updated data to localStorage
+    await saveProjectData(currentData);
+    
+    const updatedTask = currentData.tasks.find(t => t.id === taskId);
+    console.log(`✅ Task ${taskId} synchronized to localStorage`);
+    return { success: true, task: updatedTask };
+    
+  } catch (error) {
+    console.error(`❌ Failed to update task ${taskId}:`, error);
+    throw error;
+  }
+}
+
+// Clear saved data (for testing/reset)
+export function clearSavedData() {
+  localStorage.removeItem(STORAGE_KEY);
+  console.log('🗑️ Cleared saved project data');
+}
+
+// Get default data structure
+function getDefaultData() {
   return {
     tasks,
     links,
@@ -170,4 +289,16 @@ export function getData() {
     taskTypes,
     markers,
   };
+}
+
+// Main data export function - now loads from localStorage if available
+export function getData() {
+  const savedData = loadProjectData();
+  if (savedData) {
+    console.log('📂 Loaded project data from localStorage (last saved:', savedData.lastSaved, ')');
+    return savedData;
+  } else {
+    console.log('🆕 Using default project data');
+    return getDefaultData();
+  }
 }
