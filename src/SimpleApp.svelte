@@ -89,14 +89,10 @@
   // Configure editor items following the official demo pattern
   import { defaultEditorItems } from "wx-svelte-gantt";
   
-  // Use explicit date configuration to match what you suggested
-  const defaultDateConfig = {
-    format: "%Y-%m-%d"
-  };
-  
-  // Alternative format that might work better
-  const alternativeDateConfig = {
-    format: "%Y/%m/%d"
+  // Use consistent YYYY-MM-DD date format for all date controls
+  const standardDateConfig = {
+    format: "%Y-%m-%d",
+    editable: true
   };
   
   // Create comprehensive editor configuration with two-column layout
@@ -114,9 +110,9 @@
     { comp: "text", key: "resources", label: "Resources", column: "left", placeholder: "e.g., R001, R002" },
     
     // Right column - dates, duration, and progress
-    { comp: "date", key: "start", label: "Start Date", column: "right", config: alternativeDateConfig },
+    { comp: "date", key: "start", label: "Start Date", column: "right", config: standardDateConfig },
     { comp: "number", key: "duration", label: "Duration (days)", column: "right", min: 0 },
-    { comp: "date", key: "end", label: "End Date", column: "right", config: alternativeDateConfig },
+    { comp: "date", key: "end", label: "End Date", column: "right", config: standardDateConfig },
     { comp: "slider", key: "progress", label: "Progress (%)", column: "right", min: 0, max: 100 },
     
     // Links (Predecessors and Successors combined)
@@ -569,12 +565,12 @@
         <div class="bar">
           <Field label="Project Start" position="left">
             {#snippet children({ id })}
-              <DatePicker bind:value={start} {id} format={"%Y/%m/%d"} />
+              <DatePicker bind:value={start} {id} format={"%Y-%m-%d"} editable={true} />
             {/snippet}
           </Field>
           <Field label="Project End" position="left">
             {#snippet children({ id })}
-              <DatePicker bind:value={end} {id} format={"%Y/%m/%d"} />
+              <DatePicker bind:value={end} {id} format={"%Y-%m-%d"} editable={true} />
             {/snippet}
           </Field>
           <Field label="Auto Scale" position="left">
@@ -764,4 +760,43 @@
   }
 
   /* Comments are now integrated into the main Editor - no need for modal styling */
+
+  /* Fix DatePicker dropdown positioning - force calendars to appear below the input */
+  :global(.wx-datepicker) {
+    position: relative;
+  }
+
+  :global(.wx-datepicker .wx-popup) {
+    top: 100% !important;
+    bottom: auto !important;
+    margin-top: 4px;
+  }
+
+  :global(.wx-popup.wx-calendar) {
+    top: 100% !important;
+    bottom: auto !important;
+    transform: translateY(0) !important;
+  }
+
+  /* Alternative approach - ensure date picker containers have proper z-index and positioning */
+  .bar :global(.wx-field) {
+    position: relative;
+    z-index: 10;
+  }
+
+  .bar :global(.wx-datepicker .wx-popup) {
+    position: absolute !important;
+    top: calc(100% + 2px) !important;
+    bottom: auto !important;
+    left: 0 !important;
+    margin: 0;
+    z-index: 1000;
+  }
+
+  /* Ensure the bar itself doesn't interfere with dropdown positioning */
+  .bar {
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+  }
 </style>
