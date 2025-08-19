@@ -3,11 +3,14 @@
   import { DatePicker, Field, Locale, Switch } from "wx-svelte-core";
   import { Comments } from "wx-svelte-comments";
   import SimpleCustomTaskForm from "./SimpleCustomTaskForm.svelte";
+  import Links from "./Links.svelte";
   import "./gantt-styles.css";
   import MyTooltipContent from "./MyTooltipContent.svelte";
 
   // Register the Comments component with the Editor
   registerEditorItem("comments", Comments);
+  // Register the official Links component
+  registerEditorItem("links", Links);
 
   // Simple initial data - let Gantt manage everything
   let currentProjectData = $state({
@@ -86,6 +89,12 @@
   // Configure editor items following the official demo pattern
   import { defaultEditorItems } from "wx-svelte-gantt";
   
+  // Get the default date component config that includes time
+  const defaultDateConfig = {
+    time: true,
+    format: "%Y-%m-%d %H:%i"
+  };
+  
   // Create comprehensive editor configuration with two-column layout
   const editorItems = [
     // Left column - basic task information
@@ -101,10 +110,13 @@
     { comp: "text", key: "resources", label: "Resources", column: "left", placeholder: "e.g., R001, R002" },
     
     // Right column - dates, duration, and progress
-    { comp: "datepicker", key: "start", label: "Start Date", column: "right" },
+    { comp: "date", key: "start", label: "Start Date", column: "right", config: defaultDateConfig },
     { comp: "number", key: "duration", label: "Duration (days)", column: "right", min: 0 },
-    { comp: "datepicker", key: "end", label: "End Date", column: "right" },
+    { comp: "date", key: "end", label: "End Date", column: "right", config: defaultDateConfig },
     { comp: "slider", key: "progress", label: "Progress (%)", column: "right", min: 0, max: 100 },
+    
+    // Links (Predecessors and Successors combined)
+    { comp: "links", key: "links", label: "Task Dependencies" },
     
     // Comments section (can span full width)
     {
