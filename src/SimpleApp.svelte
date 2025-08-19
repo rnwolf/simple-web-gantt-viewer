@@ -1,10 +1,13 @@
 <script>
-  import { Gantt, Willow, Tooltip, ContextMenu, Fullscreen, Toolbar, Editor } from "wx-svelte-gantt";
+  import { Gantt, Willow, Tooltip, ContextMenu, Fullscreen, Toolbar, Editor, registerEditorItem } from "wx-svelte-gantt";
   import { DatePicker, Field, Locale, Switch } from "wx-svelte-core";
   import { Comments } from "wx-svelte-comments";
   import SimpleCustomTaskForm from "./SimpleCustomTaskForm.svelte";
   import "./gantt-styles.css";
   import MyTooltipContent from "./MyTooltipContent.svelte";
+
+  // Register the Comments component with the Editor
+  registerEditorItem("comments", Comments);
 
   // Simple initial data - let Gantt manage everything
   let currentProjectData = $state({
@@ -17,7 +20,15 @@
         text: "Project Root",
         progress: 60,
         type: "summary",
-        details: "Main project container with all tasks"
+        details: "Main project container with all tasks",
+        comments: [
+          {
+            id: 1,
+            user: 1,
+            content: "This is the main project container. All tasks should be organized under this.",
+            date: new Date(),
+          }
+        ]
       },
       {
         id: 2,
@@ -28,7 +39,8 @@
         progress: 80,
         type: "task",
         resources: "R001, R002",
-        details: "First phase of the project work"
+        details: "First phase of the project work",
+        comments: []
       },
       {
         id: 3,
@@ -39,7 +51,8 @@
         progress: 40,
         type: "task",
         resources: "R003",
-        details: "Second phase following Task 1"
+        details: "Second phase following Task 1",
+        comments: []
       }
     ],
     links: [
@@ -50,13 +63,67 @@
   // Simple state
   let api = $state();
   let task = $state(null);
+  let selectedTaskId = $state(null);
   let fileInput;
   
-  // Comments state
-  let showComments = $state(false);
-  let selectedTaskForComments = $state(null);
-  let commentsData = $state([]);
-
+  // Create users for the comments (following official demo pattern)
+  const users = [
+    { id: 1, name: "Alex" },
+    { id: 2, name: "John" },
+    { id: 3, name: "Bob" },
+    { id: 4, name: "Mary" },
+    { id: 5, name: "Kate" },
+  ];
+  const activeUser = 1;
+  
+  // Task types definition - moved up to be available for editor config
+  const taskTypes = [
+    { id: "task", label: "Task" },
+    { id: "summary", label: "Summary task" },
+    { id: "milestone", label: "Milestone" }
+  ];
+  
+  // Configure editor items following the official demo pattern
+  import { defaultEditorItems } from "wx-svelte-gantt";
+  
+  // Create comprehensive editor configuration with two-column layout
+  const editorItems = [
+    // Left column - basic task information
+    { comp: "text", key: "text", label: "Task Name", column: "left" },
+    { comp: "textarea", key: "details", label: "Description", column: "left" },
+    {
+      comp: "select",
+      key: "type",
+      label: "Task Type",
+      column: "left",
+      options: taskTypes
+    },
+    { comp: "text", key: "resources", label: "Resources", column: "left", placeholder: "e.g., R001, R002" },
+    
+    // Right column - dates, duration, and progress
+    { comp: "datepicker", key: "start", label: "Start Date", column: "right" },
+    { comp: "number", key: "duration", label: "Duration (days)", column: "right", min: 0 },
+    { comp: "datepicker", key: "end", label: "End Date", column: "right" },
+    { comp: "slider", key: "progress", label: "Progress (%)", column: "right", min: 0, max: 100 },
+    
+    // Comments section (can span full width)
+    {
+      key: "comments",
+      comp: "comments",
+      label: "Comments",
+      users,
+      activeUser,
+    }
+  ];
+  
+  // Editor configuration
+  const editorConfig = {
+    placement: "sidebar", // or "modal" for popup
+    layout: "columns",
+    autoSave: true,
+    items: editorItems
+  };
+  
   // Date controls
   let start = $state(new Date(2023, 11, 1));
   let end = $state(new Date(2023, 11, 29));
@@ -75,11 +142,7 @@
     { id: "resources", header: "Resources", flexgrow: 1, align: "center" }
   ];
 
-  const taskTypes = [
-    { id: "task", label: "Task" },
-    { id: "summary", label: "Summary task" },
-    { id: "milestone", label: "Milestone" }
-  ];
+  // Task types already defined above for editor configuration
 
   // Function to add a new task
   function addNewTask(parentId = null) {
@@ -113,72 +176,8 @@
     }
   }
 
-  // Comments functions
-  function showTaskComments(taskId) {
-    if (!api) {
-      alert("Gantt not ready");
-      return;
-    }
+  // Remove the custom comments functions - we'll use the built-in editor now
 
-    const tasks = api.serialize();
-    const task = tasks.find(t => t.id === taskId);
-    
-    if (!task) {
-      alert("Task not found");
-      return;
-    }
-
-    selectedTaskForComments = task;
-    commentsData = task.comments || [];
-    showComments = true;
-  }
-
-  function closeComments() {
-    showComments = false;
-    selectedTaskForComments = null;
-    commentsData = [];
-  }
-
-  function addComment(commentText) {
-    if (!commentText || !selectedTaskForComments || !api) return;
-
-    const newComment = {
-      id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      text: commentText.trim(),
-      date: new Date().toISOString()
-    };
-
-    const updatedComments = [...commentsData, newComment];
-    const updatedTask = {
-      ...selectedTaskForComments,
-      comments: updatedComments
-    };
-
-    api.exec("update-task", { id: selectedTaskForComments.id, task: updatedTask });
-    commentsData = updatedComments;
-    selectedTaskForComments = updatedTask;
-  }
-
-  function deleteComment(commentId) {
-    if (!selectedTaskForComments || !api) return;
-
-    const updatedComments = commentsData.filter(c => c.id !== commentId);
-    const updatedTask = {
-      ...selectedTaskForComments,
-      comments: updatedComments
-    };
-
-    api.exec("update-task", { id: selectedTaskForComments.id, task: updatedTask });
-    commentsData = updatedComments;
-    selectedTaskForComments = updatedTask;
-  }
-
-  // Transform comments for the Comments component (with current timestamps)
-  let transformedComments = $derived(commentsData.map(comment => ({
-    id: comment.id,
-    text: comment.text,
-    date: new Date(comment.date).toLocaleString()
-  })));
 
   // Initialize - simple setup without intercepting the editor
   function init(api) {
@@ -186,15 +185,65 @@
     
     // Expose functions globally so they can be called
     window.addNewTask = addNewTask;
-    window.showTaskComments = showTaskComments;
     
     // Listen for task selection to enable comments button
     api.on("select-task", (ev) => {
       const { id } = ev;
       console.log("Task selected:", id);
+      selectedTaskId = id;
     });
     
     console.log("Simple Gantt initialization completed - built-in editor and comments enabled");
+  }
+  
+  // Handle editor changes to implement automatic date calculations
+  function handleEditorChange(ev) {
+    const { values, id } = ev;
+    if (!api || !id || !values) return;
+    
+    console.log("Editor change:", { id, values });
+    
+    let updatedTask = { ...values };
+    let needsUpdate = false;
+    
+    // Handle milestone type - set duration to 0
+    if (values.type === "milestone" && values.duration !== 0) {
+      updatedTask.duration = 0;
+      delete updatedTask.end;
+      needsUpdate = true;
+    }
+    
+    // Auto-calculate end date when start date or duration changes
+    if (values.start && values.duration && values.duration > 0 && values.type !== "milestone") {
+      const startDate = new Date(values.start);
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + parseInt(values.duration));
+      
+      if (!values.end || values.end.getTime() !== endDate.getTime()) {
+        updatedTask.end = endDate;
+        needsUpdate = true;
+      }
+    }
+    
+    // Auto-calculate duration when end date changes
+    if (values.start && values.end && values.type !== "milestone") {
+      const startDate = new Date(values.start);
+      const endDate = new Date(values.end);
+      const diffTime = endDate.getTime() - startDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const calculatedDuration = Math.max(1, diffDays);
+      
+      if (values.duration !== calculatedDuration) {
+        updatedTask.duration = calculatedDuration;
+        needsUpdate = true;
+      }
+    }
+    
+    // Apply updates if needed
+    if (needsUpdate) {
+      console.log("Applying calculated updates:", updatedTask);
+      api.exec("update-task", { id, task: updatedTask });
+    }
   }
 
   // Form actions - work directly with API
@@ -261,18 +310,26 @@
       const cleanTasks = tasks.map((task, index) => {
         const cleanTask = { ...task };
         
-        // Clean up any unwanted properties
+        // Clean up any unwanted properties but preserve comments
         delete cleanTask.data;
         delete cleanTask.$x;
         delete cleanTask.$y;
         delete cleanTask.$w;
         delete cleanTask.$h;
         
-        return {
+        // Ensure comments are preserved if they exist
+        const finalTask = {
           ...cleanTask,
           id: index + 1,
           parent: task.parent ? tasks.findIndex(t => t.id === task.parent) + 1 : undefined
         };
+        
+        // Preserve comments if they exist
+        if (task.comments && Array.isArray(task.comments)) {
+          finalTask.comments = task.comments;
+        }
+        
+        return finalTask;
       });
 
       const cleanLinks = links.map((link, index) => ({
@@ -332,13 +389,24 @@
           return;
         }
 
-        // Convert date strings back to Date objects
-        const processedTasks = jsonData.tasks.map(task => ({
-          ...task,
-          start: new Date(task.start),
-          end: task.end ? new Date(task.end) : undefined
-        }));
+        // Convert date strings back to Date objects and preserve comments
+        const processedTasks = jsonData.tasks.map(task => {
+          const processedTask = {
+            ...task,
+            start: new Date(task.start),
+            end: task.end ? new Date(task.end) : undefined
+          };
+          
+          // Explicitly preserve comments if they exist
+          if (task.comments && Array.isArray(task.comments)) {
+            processedTask.comments = task.comments;
+            console.log(`Loaded ${task.comments.length} comments for task: ${task.text}`);
+          }
+          
+          return processedTask;
+        });
 
+        
         // Update our reactive state - this should trigger Gantt re-render
         currentProjectData = {
           tasks: processedTasks,
@@ -404,6 +472,7 @@
           { id: 1, source: 2, target: 3, type: "e2s" }
         ]
       };
+      
       
       // Update reactive state - this should trigger Gantt re-render
       currentProjectData = initialData;
@@ -506,17 +575,6 @@
               <button class="toolbar-btn new" onclick={createNewProject} title="New Project">
                 📄 New
               </button>
-              <button class="toolbar-btn comments" onclick={() => {
-                // For simplicity, show comments for the first task - in real app you'd track selected task
-                const tasks = api?.serialize();
-                if (tasks && tasks.length > 0) {
-                  showTaskComments(tasks[0].id);
-                } else {
-                  alert('No tasks available for comments');
-                }
-              }} title="Task Comments">
-                💬 Comments
-              </button>
             </div>
           </div>
           <Fullscreen hotkey="ctrl+shift+f">
@@ -534,33 +592,13 @@
               {end}
             />
           </Fullscreen>
-          <Editor {api} />
+          <Editor {api} items={editorItems} onchange={handleEditorChange} />
         </Tooltip>
       </ContextMenu>
     </Willow>
   </div>
 
-  <!-- Comments Modal -->
-  {#if showComments && selectedTaskForComments}
-    <div class="comments-overlay" onclick={closeComments}>
-      <div class="comments-dialog" onclick={(e) => e.stopPropagation()}>
-        <div class="comments-header">
-          <h3>Comments for: {selectedTaskForComments.text}</h3>
-          <button class="close-btn" onclick={closeComments}>×</button>
-        </div>
-        
-        <div class="comments-content">
-          <Willow>
-            <Comments 
-              data={transformedComments}
-              on:add={(e) => addComment(e.detail.text)}
-              on:delete={(e) => deleteComment(e.detail.id)}
-            />
-          </Willow>
-        </div>
-      </div>
-    </div>
-  {/if}
+  <!-- Comments are now integrated into the main Editor component above -->
 </main>
 
 <style>
@@ -699,106 +737,5 @@
     border-color: #545b62;
   }
 
-  .toolbar-btn.comments {
-    background-color: #17a2b8;
-    color: white;
-    border-color: #17a2b8;
-  }
-
-  .toolbar-btn.comments:hover {
-    background-color: #138496;
-    border-color: #138496;
-  }
-
-  /* Comments Modal Styling */
-  .comments-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10000;
-  }
-
-  .comments-dialog {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    width: 90%;
-    max-width: 600px;
-    max-height: 80vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .comments-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid #e1e5e9;
-    background-color: #f8f9fa;
-  }
-
-  .comments-header h3 {
-    margin: 0;
-    color: #333;
-    font-size: 18px;
-    font-weight: 600;
-  }
-
-  .close-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #666;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-  }
-
-  .close-btn:hover {
-    background-color: #e9ecef;
-    color: #333;
-  }
-
-  .comments-content {
-    flex: 1;
-    overflow: auto;
-    padding: 20px;
-  }
-
-  /* Ensure the comments component has proper styling */
-  :global(.comments-content .wx-comments) {
-    max-height: 400px;
-    overflow-y: auto;
-  }
-
-  /* Style the comments component input and items */
-  :global(.comments-content .wx-comments .wx-comments-item) {
-    margin-bottom: 12px;
-    padding: 12px;
-    border: 1px solid #e1e5e9;
-    border-radius: 6px;
-    background-color: #f8f9fa;
-  }
-
-  :global(.comments-content .wx-comments .wx-comments-add) {
-    margin-top: 16px;
-    padding: 12px;
-    border: 1px solid #e1e5e9;
-    border-radius: 6px;
-    background-color: white;
-  }
+  /* Comments are now integrated into the main Editor - no need for modal styling */
 </style>
