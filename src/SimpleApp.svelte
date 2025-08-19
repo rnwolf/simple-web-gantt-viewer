@@ -1,6 +1,7 @@
 <script>
   import { Gantt, Willow, Tooltip, ContextMenu, Fullscreen, Toolbar, Editor } from "wx-svelte-gantt";
   import { DatePicker, Field, Locale, Switch } from "wx-svelte-core";
+  import { Comments } from "wx-svelte-comments";
   import SimpleCustomTaskForm from "./SimpleCustomTaskForm.svelte";
   import "./gantt-styles.css";
   import MyTooltipContent from "./MyTooltipContent.svelte";
@@ -50,6 +51,11 @@
   let api = $state();
   let task = $state(null);
   let fileInput;
+  
+  // Comments state
+  let showComments = $state(false);
+  let selectedTaskForComments = $state(null);
+  let commentsData = $state([]);
 
   // Date controls
   let start = $state(new Date(2023, 11, 1));
@@ -107,14 +113,88 @@
     }
   }
 
+  // Comments functions
+  function showTaskComments(taskId) {
+    if (!api) {
+      alert("Gantt not ready");
+      return;
+    }
+
+    const tasks = api.serialize();
+    const task = tasks.find(t => t.id === taskId);
+    
+    if (!task) {
+      alert("Task not found");
+      return;
+    }
+
+    selectedTaskForComments = task;
+    commentsData = task.comments || [];
+    showComments = true;
+  }
+
+  function closeComments() {
+    showComments = false;
+    selectedTaskForComments = null;
+    commentsData = [];
+  }
+
+  function addComment(commentText) {
+    if (!commentText || !selectedTaskForComments || !api) return;
+
+    const newComment = {
+      id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: commentText.trim(),
+      date: new Date().toISOString()
+    };
+
+    const updatedComments = [...commentsData, newComment];
+    const updatedTask = {
+      ...selectedTaskForComments,
+      comments: updatedComments
+    };
+
+    api.exec("update-task", { id: selectedTaskForComments.id, task: updatedTask });
+    commentsData = updatedComments;
+    selectedTaskForComments = updatedTask;
+  }
+
+  function deleteComment(commentId) {
+    if (!selectedTaskForComments || !api) return;
+
+    const updatedComments = commentsData.filter(c => c.id !== commentId);
+    const updatedTask = {
+      ...selectedTaskForComments,
+      comments: updatedComments
+    };
+
+    api.exec("update-task", { id: selectedTaskForComments.id, task: updatedTask });
+    commentsData = updatedComments;
+    selectedTaskForComments = updatedTask;
+  }
+
+  // Transform comments for the Comments component (with current timestamps)
+  let transformedComments = $derived(commentsData.map(comment => ({
+    id: comment.id,
+    text: comment.text,
+    date: new Date(comment.date).toLocaleString()
+  })));
+
   // Initialize - simple setup without intercepting the editor
   function init(api) {
     console.log("Initializing simple Gantt");
     
-    // Expose the addNewTask function globally so it can be called
+    // Expose functions globally so they can be called
     window.addNewTask = addNewTask;
+    window.showTaskComments = showTaskComments;
     
-    console.log("Simple Gantt initialization completed - built-in editor enabled");
+    // Listen for task selection to enable comments button
+    api.on("select-task", (ev) => {
+      const { id } = ev;
+      console.log("Task selected:", id);
+    });
+    
+    console.log("Simple Gantt initialization completed - built-in editor and comments enabled");
   }
 
   // Form actions - work directly with API
@@ -426,6 +506,17 @@
               <button class="toolbar-btn new" onclick={createNewProject} title="New Project">
                 📄 New
               </button>
+              <button class="toolbar-btn comments" onclick={() => {
+                // For simplicity, show comments for the first task - in real app you'd track selected task
+                const tasks = api?.serialize();
+                if (tasks && tasks.length > 0) {
+                  showTaskComments(tasks[0].id);
+                } else {
+                  alert('No tasks available for comments');
+                }
+              }} title="Task Comments">
+                💬 Comments
+              </button>
             </div>
           </div>
           <Fullscreen hotkey="ctrl+shift+f">
@@ -448,6 +539,28 @@
       </ContextMenu>
     </Willow>
   </div>
+
+  <!-- Comments Modal -->
+  {#if showComments && selectedTaskForComments}
+    <div class="comments-overlay" onclick={closeComments}>
+      <div class="comments-dialog" onclick={(e) => e.stopPropagation()}>
+        <div class="comments-header">
+          <h3>Comments for: {selectedTaskForComments.text}</h3>
+          <button class="close-btn" onclick={closeComments}>×</button>
+        </div>
+        
+        <div class="comments-content">
+          <Willow>
+            <Comments 
+              data={transformedComments}
+              on:add={(e) => addComment(e.detail.text)}
+              on:delete={(e) => deleteComment(e.detail.id)}
+            />
+          </Willow>
+        </div>
+      </div>
+    </div>
+  {/if}
 </main>
 
 <style>
@@ -584,5 +697,108 @@
   .toolbar-btn.new:hover {
     background-color: #545b62;
     border-color: #545b62;
+  }
+
+  .toolbar-btn.comments {
+    background-color: #17a2b8;
+    color: white;
+    border-color: #17a2b8;
+  }
+
+  .toolbar-btn.comments:hover {
+    background-color: #138496;
+    border-color: #138496;
+  }
+
+  /* Comments Modal Styling */
+  .comments-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  }
+
+  .comments-dialog {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .comments-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e1e5e9;
+    background-color: #f8f9fa;
+  }
+
+  .comments-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .close-btn:hover {
+    background-color: #e9ecef;
+    color: #333;
+  }
+
+  .comments-content {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+  }
+
+  /* Ensure the comments component has proper styling */
+  :global(.comments-content .wx-comments) {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  /* Style the comments component input and items */
+  :global(.comments-content .wx-comments .wx-comments-item) {
+    margin-bottom: 12px;
+    padding: 12px;
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+  }
+
+  :global(.comments-content .wx-comments .wx-comments-add) {
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid #e1e5e9;
+    border-radius: 6px;
+    background-color: white;
   }
 </style>
