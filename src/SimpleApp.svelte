@@ -89,9 +89,14 @@
   // Configure editor items following the official demo pattern
   import { defaultEditorItems } from "wx-svelte-gantt";
   
-  // Use simple date configuration without time (following SVAR pattern)
+  // Use explicit date configuration to match what you suggested
   const defaultDateConfig = {
     format: "%Y-%m-%d"
+  };
+  
+  // Alternative format that might work better
+  const alternativeDateConfig = {
+    format: "%Y/%m/%d"
   };
   
   // Create comprehensive editor configuration with two-column layout
@@ -109,9 +114,9 @@
     { comp: "text", key: "resources", label: "Resources", column: "left", placeholder: "e.g., R001, R002" },
     
     // Right column - dates, duration, and progress
-    { comp: "date", key: "start", label: "Start Date", column: "right", config: defaultDateConfig },
+    { comp: "date", key: "start", label: "Start Date", column: "right", config: alternativeDateConfig },
     { comp: "number", key: "duration", label: "Duration (days)", column: "right", min: 0 },
-    { comp: "date", key: "end", label: "End Date", column: "right", config: defaultDateConfig },
+    { comp: "date", key: "end", label: "End Date", column: "right", config: alternativeDateConfig },
     { comp: "slider", key: "progress", label: "Progress (%)", column: "right", min: 0, max: 100 },
     
     // Links (Predecessors and Successors combined)
@@ -127,11 +132,11 @@
     }
   ];
   
-  // Editor configuration
+  // Editor configuration with events handler to fix date/duration calculations
   const editorConfig = {
     placement: "sidebar", // or "modal" for popup
     layout: "columns",
-    autoSave: true,
+    autoSave: false, // Set to false to handle updates in the onChange event
     items: editorItems
   };
   
@@ -190,7 +195,7 @@
   // Remove the custom comments functions - we'll use the built-in editor now
 
 
-  // Initialize - simple setup without intercepting the editor
+  // Initialize - simplified setup like the official demo
   function init(api) {
     console.log("Initializing simple Gantt");
     
@@ -204,33 +209,67 @@
       selectedTaskId = id;
     });
     
-    console.log("Simple Gantt initialization completed - built-in editor and comments enabled");
+    // Optional: Add basic event logging to see what's happening
+    api.on("update-task", (ev) => {
+      console.log("🔥 Task updated via drag/form:", ev);
+    });
+    
+    api.on("move-task", (ev) => {
+      console.log("🔥 Task moved:", ev);
+    });
+    
+    console.log("Simple Gantt initialization completed - using standard SVAR behavior");
   }
   
-  // Handle editor changes - let SVAR handle most calculations internally
+  // Handle editor changes with proper date/duration synchronization (only for form edits)
   function handleEditorChange(ev) {
-    const { values, id } = ev;
-    if (!api || !id || !values) return;
+    console.log("=== EDITOR CHANGE EVENT ===");
+    console.log("Editor action:", ev);
     
-    console.log("Editor change:", { id, values });
+    const { action, id, values } = ev;
     
-    // Let SVAR handle the calculations naturally - minimal interference
-    let updatedTask = { ...values };
-    
-    // Only handle special cases that require explicit intervention
-    if (values.type === "milestone") {
-      // Milestones should have 0 duration
-      updatedTask.duration = 0;
-      // Don't set end to null here - let SVAR handle it
+    // Handle different editor actions
+    if (action === "save-task" && api && id && values) {
+      console.log("Saving task from editor:", { id, values });
+      
+      // Apply date/duration synchronization for form edits only
+      let updatedTask = { ...values };
+      
+      // Convert duration to number if it's a string
+      if (updatedTask.duration !== undefined) {
+        updatedTask.duration = parseInt(updatedTask.duration) || 0;
+        console.log("Converted duration to number:", updatedTask.duration);
+      }
+      
+      // Handle milestone type
+      if (updatedTask.type === "milestone") {
+        updatedTask.duration = 0;
+        console.log("Set duration to 0 for milestone");
+      }
+      
+      // Recalculate end date when duration or start date exist
+      if (updatedTask.start && updatedTask.duration !== undefined && updatedTask.duration > 0) {
+        const startDate = new Date(updatedTask.start);
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + updatedTask.duration);
+        updatedTask.end = endDate;
+        
+        console.log(`✅ Synchronized: Start ${startDate} + ${updatedTask.duration} days = End ${endDate}`);
+      }
+      
+      // Update the task
+      try {
+        api.exec("update-task", { id, task: updatedTask });
+        console.log("✅ Task updated from editor");
+      } catch (error) {
+        console.error("❌ Error updating task from editor:", error);
+      }
+    } else if (action === "delete-task" && api && id) {
+      console.log("Deleting task from editor:", id);
+      api.exec("delete-task", { id });
     }
     
-    console.log("Applying minimal updates:", updatedTask);
-    
-    // Apply the update and let SVAR's internal logic handle date/duration synchronization
-    api.exec("update-task", { 
-      id, 
-      task: updatedTask
-    });
+    console.log("=== END EDITOR CHANGE ===");
   }
 
   // Form actions - work directly with API
@@ -579,7 +618,7 @@
               {end}
             />
           </Fullscreen>
-          <Editor {api} items={editorItems} autoSave={true} />
+          <Editor {api} items={editorItems} autoSave={false} onaction={handleEditorChange} />
         </Tooltip>
       </ContextMenu>
     </Willow>
