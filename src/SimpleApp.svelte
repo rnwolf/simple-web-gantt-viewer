@@ -89,10 +89,9 @@
   // Configure editor items following the official demo pattern
   import { defaultEditorItems } from "wx-svelte-gantt";
   
-  // Get the default date component config that includes time
+  // Use simple date configuration without time (following SVAR pattern)
   const defaultDateConfig = {
-    time: true,
-    format: "%Y-%m-%d %H:%i"
+    format: "%Y-%m-%d"
   };
   
   // Create comprehensive editor configuration with two-column layout
@@ -208,54 +207,30 @@
     console.log("Simple Gantt initialization completed - built-in editor and comments enabled");
   }
   
-  // Handle editor changes to implement automatic date calculations
+  // Handle editor changes - let SVAR handle most calculations internally
   function handleEditorChange(ev) {
     const { values, id } = ev;
     if (!api || !id || !values) return;
     
     console.log("Editor change:", { id, values });
     
+    // Let SVAR handle the calculations naturally - minimal interference
     let updatedTask = { ...values };
-    let needsUpdate = false;
     
-    // Handle milestone type - set duration to 0
-    if (values.type === "milestone" && values.duration !== 0) {
+    // Only handle special cases that require explicit intervention
+    if (values.type === "milestone") {
+      // Milestones should have 0 duration
       updatedTask.duration = 0;
-      delete updatedTask.end;
-      needsUpdate = true;
+      // Don't set end to null here - let SVAR handle it
     }
     
-    // Auto-calculate end date when start date or duration changes
-    if (values.start && values.duration && values.duration > 0 && values.type !== "milestone") {
-      const startDate = new Date(values.start);
-      const endDate = new Date(startDate);
-      endDate.setDate(startDate.getDate() + parseInt(values.duration));
-      
-      if (!values.end || values.end.getTime() !== endDate.getTime()) {
-        updatedTask.end = endDate;
-        needsUpdate = true;
-      }
-    }
+    console.log("Applying minimal updates:", updatedTask);
     
-    // Auto-calculate duration when end date changes
-    if (values.start && values.end && values.type !== "milestone") {
-      const startDate = new Date(values.start);
-      const endDate = new Date(values.end);
-      const diffTime = endDate.getTime() - startDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const calculatedDuration = Math.max(1, diffDays);
-      
-      if (values.duration !== calculatedDuration) {
-        updatedTask.duration = calculatedDuration;
-        needsUpdate = true;
-      }
-    }
-    
-    // Apply updates if needed
-    if (needsUpdate) {
-      console.log("Applying calculated updates:", updatedTask);
-      api.exec("update-task", { id, task: updatedTask });
-    }
+    // Apply the update and let SVAR's internal logic handle date/duration synchronization
+    api.exec("update-task", { 
+      id, 
+      task: updatedTask
+    });
   }
 
   // Form actions - work directly with API
@@ -604,7 +579,7 @@
               {end}
             />
           </Fullscreen>
-          <Editor {api} items={editorItems} onchange={handleEditorChange} />
+          <Editor {api} items={editorItems} autoSave={true} />
         </Tooltip>
       </ContextMenu>
     </Willow>
