@@ -393,6 +393,76 @@ async function handleTaskUpdateFromForm(data) {
   }
 }
 
+// Handle link updates from the custom form (following SVAR pattern)
+function handleLinkUpdate(data) {
+  console.log("=== LINK UPDATE ===", data);
+  
+  // Handle both old format { id, type } and new SVAR format { id, link: { type } }
+  const { id } = data;
+  const linkUpdate = data.link || { type: data.type };
+  
+  if (!linkUpdate.type) {
+    console.error("Invalid link update data - no type provided:", data);
+    return;
+  }
+
+  try {
+    // Step 1: Update the visual Gantt via the API
+    if (api && api.exec) {
+      console.log(`🔗 Updating Gantt link ${id} to type ${linkUpdate.type}`);
+      api.exec("update-link", { id, link: linkUpdate });
+    }
+
+    // Step 2: Update currentData
+    const linkIndex = currentData.links.findIndex(l => l.id === id);
+    if (linkIndex !== -1) {
+      currentData.links[linkIndex] = {
+        ...currentData.links[linkIndex],
+        ...linkUpdate
+      };
+      console.log(`✅ Updated link ${id} in currentData:`, currentData.links[linkIndex]);
+    } else {
+      console.warn(`⚠️ Link ${id} not found in currentData.links`);
+    }
+
+    // Step 3: Persist to localStorage
+    // Note: We could add a linkAPI function similar to updateTaskAPI if needed
+    // For now, the changes will be saved when the project is saved
+
+  } catch (error) {
+    console.error('❌ Error handling link update:', error);
+  }
+}
+
+// Handle link deletion from the custom form
+function handleLinkDelete(data) {
+  console.log("=== LINK DELETE ===", data);
+  const { id } = data;
+
+  try {
+    // Step 1: Delete from visual Gantt via the API
+    if (api && api.exec) {
+      console.log(`🗑️ Deleting Gantt link ${id}`);
+      api.exec("delete-link", { id });
+    }
+
+    // Step 2: Update currentData
+    const linkIndex = currentData.links.findIndex(l => l.id === id);
+    if (linkIndex !== -1) {
+      currentData.links.splice(linkIndex, 1);
+      console.log(`✅ Deleted link ${id} from currentData`);
+    } else {
+      console.warn(`⚠️ Link ${id} not found in currentData.links`);
+    }
+
+    // Step 3: Persist to localStorage
+    // Note: Changes will be saved when the project is saved
+
+  } catch (error) {
+    console.error('❌ Error handling link delete:', error);
+  }
+}
+
 // Enhanced form action with comprehensive ID management
 async function formAction(ev) {
   console.log("=== FORM ACTION ===", ev);
@@ -417,6 +487,16 @@ async function formAction(ev) {
     case "batch-cleanup-ids":
       console.log("Batch cleanup temporary IDs");
       handleBatchIdCleanup();
+      break;
+
+    case "update-link":
+      console.log("Updating link:", data);
+      handleLinkUpdate(data);
+      break;
+
+    case "delete-link":
+      console.log("Deleting link:", data);
+      handleLinkDelete(data);
       break;
 
     default:
@@ -589,10 +669,17 @@ function downloadProjectDataWithCleanup() {
     console.log("All tasks less nested data elements:", allTasksCopy);
 
 
+    // Find all temporary task IDs (corrected prefix)
     const tempTasks = allTasksCopy.filter(
-      task => typeof task.id === 'string' && task.id.startsWith('temp:')
+      task => typeof task.id === 'string' && task.id.startsWith('temp://')
     );
     console.log("All temp tasks (flat list):", tempTasks);
+    
+    // Find all temporary link IDs
+    const tempLinks = linksCopy.filter(
+      link => typeof link.id === 'string' && link.id.startsWith('temp://')
+    );
+    console.log("All temp links:", tempLinks);
 
     // Create project data
     let projectData = {
@@ -610,10 +697,11 @@ function downloadProjectDataWithCleanup() {
       markers: currentData.markers,
     };
 
-    console.log(`Found ${tempTasks.length} temporary IDs:`, tempTasks.map(t => `${t.id} (${t.text})`));
+    console.log(`Found ${tempTasks.length} temporary task IDs:`, tempTasks.map(t => `${t.id} (${t.text})`));
+    console.log(`Found ${tempLinks.length} temporary link IDs:`, tempLinks.map(l => `${l.id} (${l.source}->${l.target})`));
 
-    if (tempTasks.length > 0) {
-      console.log(`Found ${tempTasks.length} temporary IDs, cleaning up...`);
+    if (tempTasks.length > 0 || tempLinks.length > 0) {
+      console.log(`Found ${tempTasks.length} temporary task IDs and ${tempLinks.length} temporary link IDs, cleaning up...`);
 
       // Create ID mapping
       const existingNonTempIds = projectData.tasks
@@ -701,23 +789,49 @@ function downloadProjectDataWithCleanup() {
         });
       }
 
-      // After all other link processing (e.g., replacing source/target IDs)
+      // Clean up temporary link IDs - assign sequential integer IDs starting from 1
       if (projectData.links) {
+        console.log("=== CLEANING UP LINK IDS ===");
+        console.log("Links before cleanup:", projectData.links.map(l => `${l.id} (${l.source}->${l.target})`));
+        
         projectData.links = projectData.links.map((link, idx) => {
-          // Assign sequential integer IDs starting from 1
-          return { ...link, id: idx + 1 };
+          const oldId = link.id;
+          const newId = idx + 1;
+          
+          if (typeof oldId === 'string' && oldId.startsWith('temp://')) {
+            console.log(`✅ Replaced temp link ID: ${oldId} → ${newId}`);
+          } else {
+            console.log(`📝 Reassigned link ID: ${oldId} → ${newId}`);
+          }
+          
+          return { ...link, id: newId };
         });
+        
+        console.log("Links after cleanup:", projectData.links.map(l => `${l.id} (${l.source}->${l.target})`));
+        console.log("=== END LINK ID CLEANUP ===");
       }
 
       projectData.metadata.cleanedIds = true;
       // DO NOT store the mapping in the exported file - 3rd party systems don't need it
 
       // Show mapping details
-      let mappingMessage = `Cleaned ${tempTasks.length} temporary IDs:\n\n`;
-      for (const [oldId, newId] of idMapping.entries()) {
-        const taskName = tempTasks.find(t => t.id === oldId)?.text || 'Unknown';
-        mappingMessage += `• ${taskName}: ${oldId} → ${newId}\n`;
+      let mappingMessage = `Cleaned ${tempTasks.length} temporary task IDs and ${tempLinks.length} temporary link IDs:\n\n`;
+      
+      if (tempTasks.length > 0) {
+        mappingMessage += "Task ID changes:\n";
+        for (const [oldId, newId] of idMapping.entries()) {
+          const taskName = tempTasks.find(t => t.id === oldId)?.text || 'Unknown';
+          mappingMessage += `• ${taskName}: ${oldId} → ${newId}\n`;
+        }
       }
+      
+      if (tempLinks.length > 0) {
+        mappingMessage += `\nLink ID changes:\n`;
+        tempLinks.forEach((link, idx) => {
+          mappingMessage += `• Link ${link.source}→${link.target}: ${link.id} → ${idx + 1}\n`;
+        });
+      }
+      
       console.log("ID replacement completed:", mappingMessage);
 
       // Verify that no temporary IDs remain (simple check for flat structure)
@@ -1423,6 +1537,8 @@ function debugApiMethods() {
     <CustomTaskForm
       {task}
       taskTypes={currentData.taskTypes}
+      allTasks={currentData.tasks}
+      allLinks={currentData.links}
       onaction={formAction}
     />
     {/if}

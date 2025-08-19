@@ -11,7 +11,8 @@
 		DatePicker,
 	} from "wx-svelte-core";
 
-	let { task, taskTypes, onaction } = $props();
+	// Get all props from parent component
+	let { task, taskTypes, onaction, allTasks = [], allLinks = [] } = $props();
 
 	let node = $state(),
 		left = $state(),
@@ -134,6 +135,98 @@
 		{ id: "milestone", label: "Milestone" },
 		{ id: "urgent", label: "Urgent" },
 	];
+
+	// Link type options
+	const linkTypeOptions = [
+		{ id: "e2s", label: "End to Start (Finish-to-Start)" },
+		{ id: "s2s", label: "Start to Start" },
+		{ id: "e2e", label: "End to End (Finish-to-Finish)" },
+		{ id: "s2e", label: "Start to End (Start-to-Finish)" },
+	];
+
+	// Link type options (following SVAR Gantt pattern)
+	const linkTypes = [
+		{ id: "e2s", label: "End to Start (FS)" },
+		{ id: "s2s", label: "Start to Start (SS)" },
+		{ id: "e2e", label: "End to End (FF)" },
+		{ id: "s2e", label: "Start to End (SF)" },
+	];
+
+	// Get links data similar to SVAR Gantt Links component
+	let linksData = $derived(() => {
+		if (!task?.id || !allLinks || !allTasks) {
+			console.log("No links data available:", { 
+				taskId: task?.id, 
+				allLinksCount: allLinks?.length || 0, 
+				allTasksCount: allTasks?.length || 0 
+			});
+			return [];
+		}
+		
+		const taskId = task.id;
+		console.log(`Finding links for task ${taskId}:`);
+		console.log("All links:", allLinks);
+		
+		const incoming = allLinks.filter(link => {
+			console.log(`Checking link ${link.id}: source=${link.source}, target=${link.target}, matches target? ${link.target === taskId}`);
+			return link.target === taskId;
+		});
+		const outgoing = allLinks.filter(link => {
+			console.log(`Checking link ${link.id}: source=${link.source}, target=${link.target}, matches source? ${link.source === taskId}`);
+			return link.source === taskId;
+		});
+		
+		console.log(`Found ${incoming.length} incoming and ${outgoing.length} outgoing links for task ${taskId}`);
+		
+		const result = [];
+		
+		if (incoming.length > 0) {
+			result.push({
+				label: "Incoming Dependencies",
+				data: incoming.map(link => ({
+					link,
+					task: allTasks.find(t => t.id === link.source) || { text: `Task ${link.source}` }
+				}))
+			});
+		}
+		
+		if (outgoing.length > 0) {
+			result.push({
+				label: "Outgoing Dependencies", 
+				data: outgoing.map(link => ({
+					link,
+					task: allTasks.find(t => t.id === link.target) || { text: `Task ${link.target}` }
+				}))
+			});
+		}
+		
+		console.log("Final linksData result:", result);
+		return result;
+	});
+
+	// Handle link type change (following SVAR pattern)
+	function onChange(e, linkId) {
+		const newType = e.value;
+		console.log(`Changing link ${linkId} type to ${newType}`);
+		
+		// Send update action directly (following SVAR pattern)
+		onaction && onaction({
+			action: "update-link",
+			data: { id: linkId, link: { type: newType } }
+		});
+	}
+
+	// Handle link deletion
+	function deleteLink(linkId) {
+		if (confirm("Are you sure you want to delete this dependency?")) {
+			console.log(`Deleting link ${linkId}`);
+			
+			onaction && onaction({
+				action: "delete-link",
+				data: { id: linkId }
+			});
+		}
+	}
 
 	// Helper function to check if ID is temporary
 	function isTemporaryId(id) {
@@ -286,8 +379,58 @@
 				</Field>
 			{/if}
 
+			<!-- Link Dependencies Section (following SVAR Gantt pattern) -->
+			{#if linksData.length > 0}
+				<div class="links-section">
+					<h4 class="section-title">Task Dependencies</h4>
+					
+					{#each linksData as links}
+						{#if links.data.length}
+							<div class="links-group">
+								<h5>{links.label}:</h5>
+								
+								{#each links.data as obj}
+									<div class="link-item">
+										<div class="link-info">
+											<strong>{obj.task.text || ""}</strong>
+										</div>
+										<div class="link-controls">
+											<Field label="Type">
+												{#snippet children({ id })}
+													<Select
+														{id}
+														value={obj.link.type}
+														options={linkTypes}
+														onchange={(e) => onChange(e, obj.link.id)}
+													/>
+												{/snippet}
+											</Field>
+											<button 
+												class="button small danger" 
+												onclick={() => deleteLink(obj.link.id)}
+												title="Delete dependency"
+											>
+												×
+											</button>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{/if}
+					{/each}
+				</div>
+			{:else}
+				<div class="links-section">
+					<h4 class="section-title">Task Dependencies</h4>
+					<div class="no-links">
+						<p>This task has no dependencies.</p>
+						<small>Dependencies can be created by dragging from one task to another in the Gantt chart.</small>
+					</div>
+				</div>
+			{/if}
+
 			<div class="button-group">
-				<button class="button primary" onclick={onClose}>Save & Close</button>
+				<button class="button primary" onclick={onClose}>Close</button>
 				<button class="button danger" onclick={deleteTask}>Delete Task</button>
 			</div>
 		</div>
@@ -435,5 +578,81 @@
 		color: var(--wx-color-danger-font, white);
 		background-color: var(--wx-color-danger, #dc3545);
 		border-color: var(--wx-color-danger, #dc3545);
+	}
+
+	/* Link Dependencies Styles */
+	.links-section {
+		margin-top: 20px;
+		padding-top: 20px;
+		border-top: 1px solid #eee;
+	}
+
+	.section-title {
+		margin: 0 0 15px 0;
+		font-size: 16px;
+		font-weight: 600;
+		color: var(--wx-color-font, #333);
+	}
+
+	.links-group {
+		margin-bottom: 15px;
+	}
+
+	.links-group h5 {
+		margin: 0 0 10px 0;
+		font-size: 14px;
+		font-weight: 500;
+		color: var(--wx-color-font, #666);
+	}
+
+	.link-item {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 10px;
+		margin-bottom: 8px;
+		border: 1px solid #e0e0e0;
+		border-radius: 4px;
+		background: #f8f9fa;
+	}
+
+	.link-info {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex: 1;
+	}
+
+	.link-arrow {
+		color: #666;
+		font-weight: bold;
+	}
+
+	.link-controls {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.button.small {
+		padding: 5px 10px;
+		font-size: 12px;
+		min-width: auto;
+		flex: none;
+	}
+
+	.no-links {
+		text-align: center;
+		padding: 20px;
+		color: #666;
+	}
+
+	.no-links p {
+		margin: 0 0 5px 0;
+	}
+
+	.no-links small {
+		color: #999;
+		font-style: italic;
 	}
 </style>
