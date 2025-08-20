@@ -7,6 +7,7 @@
   import "./gantt-styles.css";
   import MyTooltipContent from "./MyTooltipContent.svelte";
   import urlCell from "./urlCell.svelte";
+  import MarkerManager from "./MarkerManager.svelte";
 
   // Register the Comments component with the Editor
   registerEditorItem("comments", Comments);
@@ -69,15 +70,18 @@
     ],
     markers: [
       {
+        id: 1,
         start: new Date(2023, 11, 2),
         text: "Start Project",
       },
       {
+        id: 2,
         start: new Date(2023, 11, 8),
         text: "Today",
         css: "myMiddleClass",
       },
       {
+        id: 3,
         start: new Date(2023, 11, 25),
         text: "End Project",
         css: "myEndClass",
@@ -90,6 +94,7 @@
   let task = $state(null);
   let selectedTaskId = $state(null);
   let fileInput;
+  let showMarkerManager = $state(false);
 
   // Create users for the comments (following official demo pattern)
   const users = [
@@ -609,16 +614,23 @@
           return processedTask;
         });
 
+        // Convert marker date strings back to Date objects
+        const processedMarkers = (jsonData.markers || []).map(marker => ({
+          ...marker,
+          start: new Date(marker.start)
+        }));
 
         // Update our reactive state - this should trigger Gantt re-render
         currentProjectData = {
           tasks: processedTasks,
-          links: jsonData.links || []
+          links: jsonData.links || [],
+          markers: processedMarkers
         };
 
         console.log("Loaded project data:", {
           tasksCount: processedTasks.length,
           linksCount: jsonData.links?.length || 0,
+          markersCount: processedMarkers.length,
           projectName: jsonData.metadata?.projectName
         });
 
@@ -679,15 +691,18 @@
         ],
         markers: [
           {
+            id: 1,
 			      start: new Date(2023, 11, 2),
 			      text: "Start Project",
 		      },
 		      {
+            id: 2,
 			      start: new Date(2023, 11, 8),
 			      text: "Today",
 			      css: "myMiddleClass",
 		      },
 		      {
+            id: 3,
 		  	    start: new Date(2023, 11, 25),
 		  	    text: "End Project",
 		  	    css: "myEndClass",
@@ -745,6 +760,67 @@
     if (u == "day" && isDayOff(d)) return "wx-weekend";
     return "";
   }
+
+  // Marker manager functions
+  function openMarkerManager() {
+    console.log("📍 Opening marker manager, current showMarkerManager:", showMarkerManager);
+    showMarkerManager = true;
+    console.log("📍 Set showMarkerManager to:", showMarkerManager);
+  }
+
+  function handleMarkerAction(event) {
+    const { action, data } = event.detail;
+    console.log("Marker action:", action, data);
+
+    switch (action) {
+      case "close":
+        showMarkerManager = false;
+        break;
+
+      case "add":
+        if (data.marker) {
+          // Generate a unique ID for the new marker
+          const maxId = Math.max(0, ...currentProjectData.markers.map(m => m.id || 0));
+          const newMarker = {
+            id: maxId + 1,
+            ...data.marker,
+            start: new Date(data.marker.start)
+          };
+          currentProjectData.markers.push(newMarker);
+          console.log("✅ Added new marker:", newMarker);
+        }
+        break;
+
+      case "update":
+        if (data.id !== undefined && data.marker) {
+          const markerIndex = currentProjectData.markers.findIndex(m => m.id === data.id);
+          if (markerIndex !== -1) {
+            currentProjectData.markers[markerIndex] = {
+              ...currentProjectData.markers[markerIndex],
+              ...data.marker,
+              id: data.id, // Preserve the ID
+              start: new Date(data.marker.start)
+            };
+            console.log(`✅ Updated marker with ID ${data.id}`);
+          }
+        }
+        break;
+
+      case "delete":
+        if (data.id !== undefined) {
+          const markerIndex = currentProjectData.markers.findIndex(m => m.id === data.id);
+          if (markerIndex !== -1) {
+            currentProjectData.markers.splice(markerIndex, 1);
+            console.log(`✅ Deleted marker with ID ${data.id}`);
+          }
+        }
+        break;
+
+      default:
+        console.warn("Unknown marker action:", action);
+    }
+  }
+
 </script>
 
 <main>
@@ -806,6 +882,9 @@
               <button class="toolbar-btn new" onclick={createNewProject} title="New Project">
                 📄 New
               </button>
+              <button class="toolbar-btn markers" onclick={openMarkerManager} title="Manage Markers">
+                📍 Markers
+              </button>
             </div>
           </div>
           <Fullscreen hotkey="ctrl+shift+f">
@@ -832,6 +911,16 @@
       </div>
     </Willow>
   </div>
+
+  <!-- Marker Manager Modal -->
+  {#if showMarkerManager}
+    <div class="modal-overlay">
+      <MarkerManager
+        markers={currentProjectData.markers}
+        onaction={handleMarkerAction}
+      />
+    </div>
+  {/if}
 
   <!-- Comments are now integrated into the main Editor component above -->
 </main>
@@ -1072,5 +1161,32 @@
 		flex-direction: column;
 		margin-bottom: 10px;
 	}
+
+  /* Modal overlay styling */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+
+  /* Additional button styling for markers and export */
+  .toolbar-btn.markers {
+    background-color: #6f42c1;
+    color: white;
+    border-color: #6f42c1;
+  }
+
+  .toolbar-btn.markers:hover {
+    background-color: #5a2a9d;
+    border-color: #5a2a9d;
+  }
 
 </style>
