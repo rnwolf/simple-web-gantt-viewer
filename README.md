@@ -1,16 +1,20 @@
-# Simple Web Gantt Viewer
+# Simple Web Gantt Editor
 
 Many project teams use excel to create Gantt style plans, while it works there are some downsides.
-This app provides user with the ability to load an app into your browser, that enables the development and display of gantt project plans with all data still residing locally. No data gets sent back to a server. You can load and save gantt data to your loacl file system.
+This app provides user with the ability to load an app into your browser, that enables the development and display of gantt project plans with all data still residing locally in your browser. **No data gets sent back to a server.** You can save and load gantt data to your loacl file system as when you cose your browser the data dissapears!
 
-There are manay debates an opinions on how the use of Gantt charts, especially if the team is using Agile approaches to delivery.
-In my experence there are often scenior stakeholders who desire/like gantt charts. With good stakeholder training and expectation management you can use Gantt charts in an environment where Agile appraoches are also used.  Especially if you also use Crirical CHain Project Management techniques in which you provide buffers to deal with uncertainity.
+![A Gantt chart with task editor open](docs/editing.webp)
 
-This app is a modern, feature-rich Gantt chart utility which would not be possible with out Svelte and SVAR components.
+There are manay debates an opinions on the use of Gantt charts, especially if when the team is using Agile approaches to delivery.
+In my experence there are often scenior stakeholders who desire/like gantt charts. With good stakeholder training and expectation management you can use Gantt charts in an environment where Agile approaches are also used.  Especially if you also use Critical Chain Project Management techniques in which you provide buffers to deal with uncertainity.
+
+This app is a modern, feature-rich Gantt chart utility which would not be possible without [Svelte](https://svelte.dev/) and [SVAR components.](https://svar.dev/svelte/gantt/)
 
 Svelte is a UI framework that uses a compiler to let you write concise components using HTML, CSS and JavaScript. Developers consistently rank Svelte as the framework they’re most excited about using.
 
 This application provides a comprehensive project management interface for manually scheduling tasks, resource assignments, linking dependencies, and managing project markers and file import/export capabilities.
+
+When you have your plan make sure to save it to your local drive. Then maximize the gantt chart and take a screen shot to to incluse in your communications materials.
 
 ## 🚀 Features
 

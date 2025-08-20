@@ -5,6 +5,7 @@ This document provides detailed information about all features available in the 
 ## 📊 Core Gantt Chart Features
 
 ### Interactive Timeline
+
 - **Multiple Zoom Levels**: Seamlessly zoom from years down to hours
 - **Drag & Drop**: Move tasks by dragging Gantt bars along the timeline
 - **Real-time Updates**: Immediate visual feedback for all changes
@@ -14,12 +15,12 @@ This document provides detailed information about all features available in the 
 ### Task Management
 
 #### Task Creation
+
 - **Multiple Methods**:
-  - Double-click in task list area
-  - Double-click on timeline
-  - Use context menus
+  - Click on `+New Task` button
+  - Use context menus to add task above, below or as child
 - **Rich Task Editor**: Comprehensive form with all task properties
-- **Task Types**: 
+- **Task Types**:
   - Standard Task
   - Summary Task (parent container)
   - Milestone (zero-duration marker)
@@ -28,29 +29,30 @@ This document provides detailed information about all features available in the 
   - Buffer Task
 
 #### Task Properties
+
 - **Basic Information**:
   - Task Name (required)
   - Description (optional)
   - Start Date
   - Duration (in days)
+  - Optimistic duration (optional)
+  - Pessimistic duration (optional)
   - End Date (calculated)
-  
+  - Baseline start and end dates (optional)
+  - Task type
+  - External URL links (optional)
+
 - **Progress Tracking**:
   - Progress percentage (0-100%)
   - Visual progress bars within Gantt bars
   - Auto-calculated summary progress for parent tasks
-  
+
 - **Resource Management**:
   - Resource assignment (e.g., "R001, R002")
-  - Resource tracking across project timeline
-  - Resource conflict detection
-  
-- **Additional Properties**:
-  - External URL links
-  - Custom CSS classes for styling
-  - Parent-child relationships for hierarchy
+  - #TODO - Add a second Gantt chart that display timeline from a specific resource perspective
 
 #### Task Hierarchy
+
 - **Parent-Child Relationships**: Create multi-level task structures
 - **Summary Tasks**: Automatic date calculation from child tasks
 - **Expand/Collapse**: Hide/show task subtrees
@@ -59,51 +61,55 @@ This document provides detailed information about all features available in the 
 ### Link Dependencies
 
 #### Link Types
+
 1. **End-to-Start (E2S)**: Most common - second task starts when first ends
 2. **Start-to-Start (S2S)**: Both tasks start at the same time
-3. **End-to-End (E2E)**: Both tasks end at the same time  
+3. **End-to-End (E2E)**: Both tasks end at the same time
 4. **Start-to-End (S2E)**: Second task ends when first starts
 
 #### Link Creation
-- **Visual Method**: 
+
+- **Visual Method**:
   - Hover over task to see link handles
-  - Drag from source task to target task
-  - Automatic link type suggestion
-  
+  - Click from source link handle to target task link handle
+  - Default Link type is E2S, ans can be changed via task editor
+
 - **Editor Method**:
-  - Use "Links" tab in task editor
-  - Select source/target tasks from dropdowns
+  - Use "Links" section in task editor
   - Choose link type explicitly
 
 #### Link Management
+
 - **Visual Indicators**: Arrows showing dependency direction
 - **Link Editing**: Modify existing links through editor
-- **Link Deletion**: Remove dependencies as needed
-- **Conflict Detection**: Identify circular dependencies
+- **Link Deletion**: Remove dependencies as needed via editor
 
 ### Project Markers
 
 #### Default Markers
+
 - **Start Project**: Project kick-off marker
-- **Today**: Current date indicator (updates automatically)
+- **Today**: Current date indicator
 - **End Project**: Project completion marker
 
-#### Custom Markers
+#### Create Custom Markers as required (Saved with project file)
+
 - **Milestone Markers**: Important project milestones
 - **Deadline Markers**: Critical deadlines
 - **Review Points**: Scheduled review sessions
 - **Custom Events**: Any project-specific events
 
 #### Marker Management
+
 - **Full CRUD Operations**:
   - Create new markers with name, date, and style
   - Edit existing marker properties
-  - Delete markers (with confirmation)
+  - Delete markers
   - View all markers in organized list
 
 - **Styling Options**:
   - Default styling
-  - Predefined marker types (Start, Today, End, Milestone, Deadline)
+  - Predefined marker types (Today, End)
   - Custom CSS classes for unique styling
 
 ## 💾 Data Management
@@ -111,87 +117,87 @@ This document provides detailed information about all features available in the 
 ### File Operations
 
 #### Save Functionality
+
 - **Format**: JSON files containing all project data
 - **Content Includes**:
   - All tasks with complete properties
   - All links/dependencies
   - All project markers
-  - Comments and user data
+  - Comments
 - **Browser Download**: Uses browser's native download mechanism
 - **Filename Control**: User-specified filenames
 
 #### Load Functionality
+
 - **File Selection**: Browser file picker
 - **Format Validation**: Ensures valid JSON structure
 - **Complete Replacement**: Loads new project, replacing current data
 - **Error Handling**: Graceful handling of invalid files
 
 #### New Project
+
 - **Clean Slate**: Clears all current project data
 - **Template Data**: Loads minimal starter template
-- **Confirmation Dialog**: Prevents accidental data loss
 
 ### Data Persistence
+
 - **Session State**: Maintains project state during browser session
 - **Real-time Sync**: Changes immediately reflected in UI
-- **Undo/Redo**: Built-in operation history (via SVAR Gantt)
 
 ## 🎨 User Interface Features
 
 ### Custom Toolbar
+
 - **Save Button**: Download current project as JSON
 - **Load Button**: Import project from JSON file
 - **New Button**: Start fresh project (with confirmation)
 - **Markers Button**: Open marker management interface
-- **Responsive Layout**: Adapts to screen size
 
 ### Task Editor
-- **Two-Column Layout**: Efficient use of screen space
-- **Tabbed Interface**: Organized sections for different data types
+
 - **Form Validation**: Prevents invalid data entry
 - **Date Pickers**: Easy date selection with calendar widget
 - **Rich Text Areas**: Multi-line descriptions and notes
+- **Comments**: Add timestamed comments
+- **Task dependencies**: Edit predecessors and sucessors link types and delete links
 
-#### Editor Tabs
+#### Editor Fields
+
 1. **Basic Info**: Task name, description, dates, duration
 2. **Progress**: Completion percentage and tracking
-3. **Resources**: Resource assignments and management
+3. **Resources**: Resource assignments
 4. **Links**: Dependency management interface
 5. **Comments**: Collaboration and discussion threads
-6. **Advanced**: Custom properties and styling options
 
 ### Comments System
-- **User Attribution**: Comments linked to specific users
+
 - **Timestamps**: Automatic time tracking for all comments
-- **Threading**: Reply capabilities for discussions
-- **Rich Content**: Support for formatted text
-- **User Management**: Predefined user list for attribution
 
 ### Tooltips
-- **Hover Information**: Rich details on hover
+
+- **Hover Information**: Richer details on task hover
 - **Custom Content**: Task-specific information display
 - **Resource Details**: Resource assignment information
-- **Progress Indicators**: Visual progress representation
-- **Link Information**: Dependency details on link hover
 
 ### Grid Columns
+
 - **Task Name**: Primary task identifier
+- **URL Links**: Clickable external links
 - **Start Date**: Task start date with formatting
 - **Duration**: Task duration in days
-- **Progress**: Visual progress bars
 - **Resources**: Assigned resource display
-- **URL Links**: Clickable external links
 
 ## ⚡ Advanced Features
 
 ### Zoom Configuration
+
 - **7 Zoom Levels**: From year view to hour view
 - **Intelligent Scaling**: Automatic scale adjustment
 - **Custom Formats**: Date/time display formatting per level
-- **Weekend Detection**: Different styling for weekends
-- **Scale Templates**: Reusable scale configurations
+- **Weekend Display**: Different styling for weekends (Sat & Sunday)
 
 #### Zoom Levels Detail
+
 1. **Year View**: Annual overview (200-400px cells)
 2. **Year/Quarter**: Quarterly breakdowns
 3. **Quarter/Month**: Monthly planning view
@@ -201,64 +207,34 @@ This document provides detailed information about all features available in the 
 7. **Day/Hour**: Hourly precision timing
 
 ### Custom Styling
-- **Task Colors**: Different colors per task ID
-- **Gradient Effects**: Professional visual appearance
+
+- **Task Colors**: Different colours per task types
+- **Gradient Effects**: Task progress
 - **Hover Effects**: Interactive feedback
 - **Summary Task Styling**: Special appearance for parent tasks
-- **Progress Visualization**: Color-coded completion status
+- **Progress Visualization**: Colour-coded completion status
 
 ### Responsive Design
-- **Mobile Support**: Touch-friendly interface
-- **Tablet Optimization**: Medium screen layout adjustments
-- **Desktop Excellence**: Full feature availability
+
 - **Flexible Layout**: Adapts to various screen sizes
-- **Touch Gestures**: Mobile drag and drop support
 
 ## 🔧 Technical Features
 
 ### Performance
+
 - **Virtual Scrolling**: Efficient handling of large datasets
 - **Lazy Loading**: On-demand component initialization
 - **Optimized Rendering**: Minimal DOM updates
-- **Memory Management**: Efficient state management
-- **Batch Updates**: Grouped operations for better performance
 
 ### Browser Support
+
 - **Modern Browsers**: Full support for current browser versions
 - **Local File Access**: Save/load without server requirements
-- **ES2020+ Features**: Modern JavaScript capabilities
 - **Progressive Enhancement**: Graceful degradation for older browsers
 
-### Extensibility
-- **Component Architecture**: Modular, reusable components
-- **Plugin System**: SVAR plugin integration
-- **Custom Themes**: Style customization capabilities
-- **API Integration**: Ready for external system integration
-- **Configuration Options**: Extensive customization possibilities
+### Development Extensibility
 
-## 🚀 Future Enhancement Opportunities
-
-### Potential Additions
-- **Export Formats**: PDF, PNG, Excel export options
-- **Print Support**: Optimized printing layouts
-- **Templates**: Pre-built project templates
-- **Baselines**: Baseline tracking and comparison
-- **Resource Calendars**: Resource availability management
-- **Critical Path**: Critical path analysis and highlighting
-- **Gantt Splitting**: Split tasks across time periods
-- **Bulk Operations**: Multi-task editing capabilities
-- **Data Validation**: Advanced data integrity checks
-- **Collaboration**: Real-time multi-user editing
-
-### Integration Possibilities
-- **Project Management Tools**: Jira, Asana, Trello integration
-- **Calendar Systems**: Google Calendar, Outlook synchronization
-- **File Storage**: Cloud storage integration (Google Drive, Dropbox)
-- **Database Connectivity**: Direct database connections
-- **API Endpoints**: RESTful API for external integrations
-- **Authentication**: User management and permissions
-- **Notification Systems**: Email and push notifications
-- **Version Control**: Project version tracking
+- **Component Architecture**: Modular, reusable SVAR components
 
 ---
 
