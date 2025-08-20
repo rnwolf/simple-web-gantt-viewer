@@ -236,6 +236,189 @@ This document provides detailed information about all features available in the 
 
 - **Component Architecture**: Modular, reusable SVAR components
 
+
+## Sample Project JSON File
+
+```json
+{
+  "metadata": {
+    "projectName": "Simple Gantt Project",
+    "exportDate": "2025-08-20T15:20:09.119Z",
+    "version": "1.0.0"
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "open": true,
+      "start": "2023-12-06T00:00:00.000Z",
+      "duration": 9,
+      "text": "Project Root",
+      "progress": 60,
+      "type": "summary",
+      "details": "Main project container with all tasks",
+      "comments": [
+        {
+          "id": 1,
+          "user": 1,
+          "content": "This is the main project container. All tasks should be organized under this.",
+          "date": "2025-08-20T15:18:36.163Z"
+        }
+      ],
+      "end": "2023-12-15T00:00:00.000Z",
+      "$level": 1,
+      "$skip": false
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "start": "2023-12-06T00:00:00.000Z",
+      "base_start": "2023-12-05T00:00:00.000Z",
+      "base_end": "2023-12-09T00:00:00.000Z",
+      "duration": 4,
+      "text": "Task 1",
+      "progress": 75,
+      "type": "task",
+      "resources": "R001, R002",
+      "details": "First phase of the project work",
+      "comments": [],
+      "end": "2023-12-10T00:00:00.000Z",
+      "base_duration": 4,
+      "$level": 2,
+      "$skip": false,
+      "optimistic": "6",
+      "pessimistic": "8",
+      "unscheduled": false
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "start": "2023-12-11T00:00:00.000Z",
+      "base_start": "2023-12-11T00:00:00.000Z",
+      "base_end": "2023-12-15T00:00:00.000Z",
+      "duration": 4,
+      "optimistic": 11,
+      "pessimistic": 22,
+      "text": "Task 2",
+      "url": "https://example.com/task2",
+      "progress": 40,
+      "type": "task",
+      "resources": "R003",
+      "details": "Second phase following Task 1",
+      "comments": [],
+      "end": "2023-12-15T00:00:00.000Z",
+      "base_duration": 4,
+      "$level": 2,
+      "$skip": false
+    }
+  ],
+  "links": [
+    {
+      "id": 1,
+      "source": 2,
+      "target": 3,
+      "type": "e2s"
+    }
+  ],
+  "markers": [
+    {
+      "id": 1,
+      "start": "2023-12-02T00:00:00.000Z",
+      "text": "Start Project",
+      "left": 0
+    },
+    {
+      "id": 2,
+      "start": "2023-12-08T00:00:00.000Z",
+      "text": "Today",
+      "css": "myMiddleClass",
+      "left": 409.8
+    },
+    {
+      "id": 3,
+      "start": "2023-12-25T00:00:00.000Z",
+      "text": "End Project",
+      "css": "myEndClass",
+      "left": 1639.2
+    }
+  ],
+  "scales": [
+    {
+      "unit": "month",
+      "step": 1,
+      "format": "MMMM yyy"
+    },
+    {
+      "unit": "day",
+      "step": 1,
+      "format": "d"
+    }
+  ],
+  "columns": [
+    {
+      "id": "text",
+      "header": "Task name",
+      "flexgrow": 2,
+      "editor": "text"
+    },
+    {
+      "id": "url",
+      "header": "Url",
+      "flexgrow": 1,
+      "align": "left"
+    },
+    {
+      "id": "start",
+      "header": "Start date",
+      "flexgrow": 1,
+      "align": "center"
+    },
+    {
+      "id": "duration",
+      "header": "Duration",
+      "align": "center",
+      "flexgrow": 1
+    },
+    {
+      "id": "resources",
+      "header": "Resources",
+      "flexgrow": 1,
+      "align": "center",
+      "editor": "text"
+    }
+  ],
+  "taskTypes": [
+    {
+      "id": "task",
+      "label": "Task"
+    },
+    {
+      "id": "summary",
+      "label": "Summary task"
+    },
+    {
+      "id": "milestone",
+      "label": "Milestone"
+    },
+    {
+      "id": "critical",
+      "label": "Critical"
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow"
+    },
+    {
+      "id": "progress",
+      "label": "Progress"
+    },
+    {
+      "id": "buffer",
+      "label": "Buffer"
+    }
+  ]
+}
+```
+
 ---
 
 *This feature set provides a comprehensive project management solution suitable for teams and individuals managing complex projects with dependencies, resources, and timeline requirements.*

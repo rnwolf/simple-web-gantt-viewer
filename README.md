@@ -85,6 +85,62 @@ npm run build
 
 The built files will be in the `dist/` directory, ready for deployment.
 
+### Deploy to cloudflare worker website for access via public browser
+
+After building the assets, above with no errors you can check the wrangler.toml
+
+```toml
+#:schema node_modules/wrangler/config-schema.json
+name = "simple-web-gantt-editor"
+compatibility_date = "2024-09-25"
+assets = { directory = "./dist" }
+```
+
+Install cloudfare wrangler CLI utility
+
+```bash
+ npx wrangler --version
+```
+
+Login to your account
+```bash
+npx wrangler login
+```
+
+Deploy app to cloud site
+```bash
+npx wrangler deploy
+```
+
+Deployment console output
+
+```bash
+ ⛅️ wrangler 4.31.0
+───────────────────
+🌀 Building list of assets...
+✨ Read 4 files from the assets directory C:\Users\rnwol\workspace\simple-web-gantt-viewer\dist
+🌀 Starting asset upload...
+🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /index.html
++ /assets/index-9PkJZyyr.css
++ /assets/index-JpO8yJsk.js
+Uploaded 1 of 3 assets
+Uploaded 2 of 3 assets
+Uploaded 3 of 3 assets
+✨ Success! Uploaded 3 files (2.88 sec)
+
+Total Upload: 0.36 KiB / gzip: 0.26 KiB
+Uploaded simple-web-gantt-editor (12.28 sec)
+Deployed simple-web-gantt-editor triggers (3.51 sec)
+  https://simple-web-gantt-editor.throughputfocus.workers.dev
+Current Version ID: 97161d48-2900-4d58-8492-f029746a4a08
+```
+
+If you want to make this app accessable via a simple URL then set up a CNAME DNS record.
+
+https://gantt.rnwolf.net
+
+
 ## 🎯 Usage
 
 ### Getting Started

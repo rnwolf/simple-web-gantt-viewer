@@ -831,7 +831,11 @@
 
 <main>
   <h1>Simple Manual Gantt Chart Editor</h1>
-
+  <p>
+    This is a simple Gantt chart editor that allows you to create, edit, and manage tasks, links, and markers. </p>
+  <p>
+    Built with [Svelte](https://svelte.dev/) and runs completely locally in your browser. Close browser and all your plans are gone! Save and load project plans locally. See the code <a href="https://github.com/rnwolf/simple-web-gantt-viewer" target="_blank"> at Github simple-web-gantt-viewer</a>.
+  </p>
   <!-- Hidden file input -->
   <input
     type="file"
@@ -932,7 +936,7 @@
 </main>
 
 <style>
-  .main {
+  :global(.main) {
     height: 100%;
     display: flex;
     flex-direction: column;

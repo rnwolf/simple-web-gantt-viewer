@@ -104,122 +104,123 @@
           <button class="close-btn" onclick={closeManager}>×</button>
         </div>
 
-      <div class="marker-content">
-        <!-- Existing Markers List -->
-        <div class="markers-list">
-          <h4>Current Markers ({markers.length})</h4>
+        <div class="marker-content">
+          <!-- Existing Markers List -->
+          <div class="markers-list">
+            <h4>Current Markers ({markers.length})</h4>
 
-          {#if markers.length === 0}
-            <p class="no-markers">No markers defined. Add your first marker below.</p>
-          {:else}
-            <div class="marker-items">
-              {#each markers as marker, index}
-                <div class="marker-item" class:editing={editingMarker?.id === marker.id}>
-                  {#if editingMarker?.id === marker.id}
-                    <!-- Edit Form -->
-                    <div class="edit-form">
-                      <Field label="Marker Name">
-                        <input
-                          type="text"
-                          bind:value={editingMarker.text}
-                          placeholder="Enter marker name"
-                          class="marker-input"
-                        />
-                      </Field>
-
-                      <Field label="Type/Style">
-                        <select bind:value={editingMarker.css} class="marker-select">
-                          {#each markerTypes as type}
-                            <option value={type.css}>{type.label}</option>
-                          {/each}
-                        </select>
-                      </Field>
-
-                      <Field label="Date">
-                        {#snippet children({ id })}
-                          <DatePicker
-                            bind:value={editingMarker.start}
-                            format="%Y-%m-%d"
-                            editable={true}
-                            {id}
+            {#if markers.length === 0}
+              <p class="no-markers">No markers defined. Add your first marker below.</p>
+            {:else}
+              <div class="marker-items">
+                {#each markers as marker, index}
+                  <div class="marker-item" class:editing={editingMarker?.id === marker.id}>
+                    {#if editingMarker?.id === marker.id}
+                      <!-- Edit Form -->
+                      <div class="edit-form">
+                        <Field label="Marker Name">
+                          <input
+                            type="text"
+                            bind:value={editingMarker.text}
+                            placeholder="Enter marker name"
+                            class="marker-input"
                           />
-                        {/snippet}
-                      </Field>
+                        </Field>
 
-                      <div class="edit-actions">
-                        <button class="save-btn" onclick={saveMarker}>💾 Save</button>
-                        <button class="cancel-btn" onclick={cancelEdit}>❌ Cancel</button>
-                      </div>
-                    </div>
-                  {:else}
-                    <!-- Display Form -->
-                    <div class="marker-display">
-                      <div class="marker-info">
-                        <div class="marker-name">{marker.text}</div>
-                        <div class="marker-date">{marker.start?.toLocaleDateString() || 'Invalid Date'}</div>
-                        {#if marker.css}
-                          <div class="marker-type">Style: {markerTypes.find(t => t.css === marker.css)?.label || 'Custom'}</div>
-                        {/if}
-                      </div>
-                      <div class="marker-actions">
-                        <button class="edit-btn" onclick={() => editMarker(marker)}>✏️ Edit</button>
-                        <button class="delete-btn" onclick={() => deleteMarker(marker.id)}>🗑️ Delete</button>
-                      </div>
-                    </div>
-                  {/if}
-                </div>
-              {/each}
-            </div>
-          {/if}
-        </div>
+                        <Field label="Type/Style">
+                          <select bind:value={editingMarker.css} class="marker-select">
+                            {#each markerTypes as type}
+                              <option value={type.css}>{type.label}</option>
+                            {/each}
+                          </select>
+                        </Field>
 
-        <!-- Add New Marker -->
-        <div class="add-marker-section">
-          <div class="add-header">
-            <h4>Add New Marker</h4>
-            <button class="toggle-add" onclick={() => showAddForm = !showAddForm}>
-              {showAddForm ? '➖ Hide' : '➕ Add Marker'}
-            </button>
+                        <Field label="Date">
+                          {#snippet children({ id })}
+                            <DatePicker
+                              bind:value={editingMarker.start}
+                              format="%Y-%m-%d"
+                              editable={true}
+                              {id}
+                            />
+                          {/snippet}
+                        </Field>
+
+                        <div class="edit-actions">
+                          <button class="save-btn" onclick={saveMarker}>💾 Save</button>
+                          <button class="cancel-btn" onclick={cancelEdit}>❌ Cancel</button>
+                        </div>
+                      </div>
+                    {:else}
+                      <!-- Display Form -->
+                      <div class="marker-display">
+                        <div class="marker-info">
+                          <div class="marker-name">{marker.text}</div>
+                          <div class="marker-date">{marker.start?.toLocaleDateString() || 'Invalid Date'}</div>
+                          {#if marker.css}
+                            <div class="marker-type">Style: {markerTypes.find(t => t.css === marker.css)?.label || 'Custom'}</div>
+                          {/if}
+                        </div>
+                        <div class="marker-actions">
+                          <button class="edit-btn" onclick={() => editMarker(marker)}>✏️ Edit</button>
+                          <button class="delete-btn" onclick={() => deleteMarker(marker.id)}>🗑️ Delete</button>
+                        </div>
+                      </div>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+            {/if}
           </div>
 
-          {#if showAddForm}
-            <div class="add-form">
-              <Field label="Marker Name">
-                <input
-                  type="text"
-                  bind:value={newMarker.text}
-                  placeholder="e.g., Phase 1 Complete, Review Deadline"
-                  class="marker-input"
-                />
-              </Field>
-
-              <Field label="Type/Style">
-                <select bind:value={newMarker.css} class="marker-select">
-                  {#each markerTypes as type}
-                    <option value={type.css}>{type.label}</option>
-                  {/each}
-                </select>
-              </Field>
-
-              <Field label="Date">
-                {#snippet children({ id })}
-                  <DatePicker
-                    bind:value={newMarker.start}
-                    format="%Y-%m-%d"
-                    editable={true}
-                    {id}
-                  />
-                {/snippet}
-              </Field>
-
-              <div class="form-actions">
-                <button class="add-btn" onclick={addMarker}>➕ Add Marker</button>
-                <button class="cancel-btn" onclick={cancelEdit}>❌ Cancel</button>
-              </div>
+          <!-- Add New Marker -->
+          <div class="add-marker-section">
+            <div class="add-header">
+              <h4>Add New Marker</h4>
+              <button class="toggle-add" onclick={() => showAddForm = !showAddForm}>
+                {showAddForm ? '➖ Hide' : '➕ Add Marker'}
+              </button>
             </div>
-          {/if}
-        </div>
-      </div>
+
+            {#if showAddForm}
+              <div class="add-form">
+                <Field label="Marker Name">
+                  <input
+                    type="text"
+                    bind:value={newMarker.text}
+                    placeholder="e.g., Phase 1 Complete, Review Deadline"
+                    class="marker-input"
+                  />
+                </Field>
+
+                <Field label="Type/Style">
+                  <select bind:value={newMarker.css} class="marker-select">
+                    {#each markerTypes as type}
+                      <option value={type.css}>{type.label}</option>
+                    {/each}
+                  </select>
+                </Field>
+
+                <Field label="Date">
+                  {#snippet children({ id })}
+                    <DatePicker
+                      bind:value={newMarker.start}
+                      format="%Y-%m-%d"
+                      editable={true}
+                      {id}
+                    />
+                  {/snippet}
+                </Field>
+
+                <div class="form-actions">
+                  <button class="add-btn" onclick={addMarker}>➕ Add Marker</button>
+                  <button class="cancel-btn" onclick={cancelEdit}>❌ Cancel</button>
+                </div>
+              </div>
+            {/if}
+          </div>
+        </div> <!-- End of marker-content -->
+      </div> <!-- End of marker-manager -->
     </Locale>
   </Willow>
 </div>
