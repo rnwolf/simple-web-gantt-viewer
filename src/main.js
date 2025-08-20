@@ -1,5 +1,5 @@
 import { mount } from 'svelte';
-import App from './SimpleApp.svelte';  // Use the simplified version
+import App from './App.svelte';
 
 const app = mount(App, {
   target: document.getElementById('app')

@@ -1,17 +1,26 @@
 {
   "name": "simple-web-gantt-viewer",
   "version": "1.0.0",
-  "description": "",
-  "main": "vite.config.js",
+  "description": "A simple, feature-rich Gantt chart viewer with task management, link dependencies, project markers, and file import/export capabilities.",
+  "main": "index.html",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --open",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --open",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "gantt",
+    "chart",
+    "project-management",
+    "task-management",
+    "svelte",
+    "svar",
+    "timeline",
+    "scheduling"
+  ],
+  "author": "Rudiger Wolf",
+  "license": "GNU General Public License v3.0",
   "type": "module",
   "dependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.1.1",

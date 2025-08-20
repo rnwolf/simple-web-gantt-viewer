@@ -1,111 +1,303 @@
-# README
+# Simple Web Gantt Viewer
 
-Basic Gantt viewer for a local project data file(s).
+Many project teams use excel to create Gantt style plans, while it works there are some downsides.
+This app provides user with the ability to load an app into your browser, that enables the development and display of gantt project plans with all data still residing locally. No data gets sent back to a server. You can load and save gantt data to your loacl file system.
 
-Aim to have dual view (syncronized)
-- gantt view
-  - Grid
-    - Task ID
-    - Task Name
-    - Resource IDs
-    - Duration
-    - Chain (Critical Chain, Feeding Chain)
-  - Bar
-    - Name with
-- resource view
-- resource view
+There are manay debates an opinions on how the use of Gantt charts, especially if the team is using Agile approaches to delivery.
+In my experence there are often scenior stakeholders who desire/like gantt charts. With good stakeholder training and expectation management you can use Gantt charts in an environment where Agile appraoches are also used.  Especially if you also use Crirical CHain Project Management techniques in which you provide buffers to deal with uncertainity.
 
-## SVAR Gantt viewer
+This app is a modern, feature-rich Gantt chart utility which would not be possible with out Svelte and SVAR components.
 
-Based on opensource Gantt viewer.
+Svelte is a UI framework that uses a compiler to let you write concise components using HTML, CSS and JavaScript. Developers consistently rank Svelte as the framework they’re most excited about using.
 
-https://svar.dev/svelte/gantt/
+This application provides a comprehensive project management interface for manually scheduling tasks, resource assignments, linking dependencies, and managing project markers and file import/export capabilities.
 
-https://github.com/svar-widgets/gantt
+## 🚀 Features
 
-https://forum.svar.dev/
+### Core Functionality
 
-### Quickstart
+- **Interactive Gantt Chart**: Visual timeline with tasks, dependencies, and progress tracking
+- **Task Management**: Create, edit, delete, and organize hierarchical tasks
+- **Link Dependencies**: Visual link creation between tasks with different relationship types
+- **Project Markers**: Timeline markers for important milestones and deadlines
+- **Progress Tracking**: Visual progress bars and percentage completion
+- **Multiple Task Types**: Support for tasks, summary tasks, crirical tasks, milestones, buffers and more
 
-mkdir simple-web-gantt-viewer
+### User Interface
 
-cd simple-web-gantt-viewer
+- **Custom Toolbar**: Save, load, new project, and marker management buttons
+- **Task Editor**: Comprehensive form with two-column layout for task details
+- **Comments System**: Built-in commenting system for task collaboration
+- **Responsive Design**: Works on desktop and mobile devices
+- **Custom Tooltips**: Rich hover information for tasks and timeline elements
 
-npm init -y
+### Data Management
 
-npm install wx-svelte-gantt vite svelte @sveltejs/vite-plugin-svelte
+- **File Import/Export**: Save and load projects as JSON files
+- **Data Persistence**: Maintains state across browser sessions
+- **Real-time Updates**: Immediate visual feedback for all changes
+- **Undo/Redo**: Built-in operation history (via SVAR Gantt)
 
-add svelta app
+### Advanced Features
 
-npm run dev
+- **Multi-level Zoom**: From years to hours view with intelligent scaling
+- **Weekend Highlighting**: Visual distinction for non-working days
+- **Resource Management**: Assign and track resources across tasks
+- **URL Links**: Attach external links to tasks
+- **Custom Styling**: Configurable themes and visual styles
 
-Open browser to view results
+## 📦 Installation
 
+### Prerequisites
+- Node.js 16+
+- npm or yarn
 
-### Features
+### Quick Start
 
-Custom formatting for task types.
-https://docs.svar.dev/svelte/gantt/guides/configuration/add_custom_task
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd simple-web-gantt-viewer
+   ```
 
-Enable editor for tasks.
-https://docs.svar.dev/svelte/gantt/guides/configuration/configure_editor
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Custom Tooltip
-https://docs.svar.dev/svelte/gantt/guides/configuration/add_tooltip
+3. **Start development server**
+   ```bash
+   npm run dev
+   ```
 
-Add columns to the grid area
-https://docs.svar.dev/svelte/gantt/guides/configuration/configure_grid
+4. **Open browser**
+   Navigate to `http://localhost:5173` (or the URL shown in terminal)
 
-Colour Weekends
-https://github.com/svar-widgets/gantt/blob/main/svelte/demos/cases/GanttHolidays.svelte
+### Build for Production
 
-Bar with start date and end date picker plus autotoggle for zoom (#TODO)
-https://github.com/svar-widgets/gantt/blob/main/svelte/demos/cases/GanttStartEnd.svelte
-
-Baseline for Gantt with base_start base_end (#TODO)
-https://docs.svar.dev/svelte/gantt/samples/#/baseline/willow
-Also need to modify the editor form: https://github.com/svar-widgets/gantt/blob/main/svelte/demos/cases/GanttBaseline.svelte
-https://github.com/svar-widgets/gantt/blob/main/svelte/demos/cases/GanttEditorConfig.svelte
-
-Add Sub Tasks to a Task (#TODO)
-https://docs.svar.dev/svelte/gantt/samples/#/editor-tasks/willow
-
-Full screen selector and hotkey
-https://github.com/svar-widgets/gantt/blob/main/svelte/demos/cases/GanttFullscreen.svelte
-
-
-Add tool bar
-https://github.com/svar-widgets/toolbar/tree/b0165e8d6f39c5b9ba72e5bc590ea0832f1a6369?tab=readme-ov-file
-https://github.com/svar-widgets/toolbar/blob/main/svelte/demos/cases/BasicInit.svelte
-
-
-Add Zoom scales Hours <-> Days <-> Weeks <-> Months <-> Quarters <-> Years
-https://docs.svar.dev/svelte/gantt/api/properties/zoom
-
-
-
-### Fix timeline header to top
-
-https://forum.svar.dev/d/159-sticky-header-for-timeline-top-bar-in-gantt-chart
-
-set the height to 100% to the root container.
-
-```
-html,
-body {
-  height: 100%;
-  padding: 0;
-  margin: 0;
-}
-#root {
-  height: 100%;
-}
+```bash
+npm run build
 ```
 
-## Alternative (Discarded - 2 years since updated)
+The built files will be in the `dist/` directory, ready for deployment.
 
-https://github.com/ANovokmet/svelte-gantt
+## 🎯 Usage
 
-https://anovokmet.github.io/svelte-gantt/
+### Getting Started
 
-A lightweight and fast interactive gantt chart/resource booking component made with Svelte. Compatible with any JS library or framework. ZERO dependencies.
+1. **Load Sample Data**: The application starts with sample project data
+2. **Explore the Interface**:
+   - Left panel shows the task list with names, dates, and progress
+   - Right panel shows the timeline with Gantt bars and dependencies
+   - Top toolbar contains action buttons
+
+### Basic Operations
+
+#### Creating Tasks
+
+1. Double-click in the task list area or timeline
+2. Fill in the task details in the popup editor:
+   - **Task Name**: Descriptive name for the task
+   - **Description**: Detailed task information
+   - **Start Date & Duration**: Timeline positioning
+   - **Progress**: Completion percentage
+   - **Task Type**: Task, Summary, Milestone, etc.
+   - **Resources**: Assigned team members or resources
+
+#### Creating Links/Dependencies
+
+1. **Create links**: Hover over a task and click on the circular link handle then move to the destination task in click on the circular link handle thus create a link.
+2. **Modify links with task editor**: Use the "Links" section in the task editor
+   - Delete links
+   - Modify link type
+3. **Link Types**:
+   - **End-to-Start** (E2S): Second task starts when first ends
+   - **Start-to-Start** (S2S): Tasks start together
+   - **End-to-End** (E2E): Tasks end together
+   - **Start-to-End** (S2E): Second task ends when first starts
+
+#### Managing Project Markers
+
+1. Click the **"Markers"** button in the toolbar
+2. In the marker manager:
+   - **View existing markers**: Start Project, Today, End Project
+   - **Add new markers**: Click "Add Marker" and fill in details
+   - **Edit markers**: Click "Edit" button on any marker
+   - **Delete markers**: Click "Delete" button (with confirmation)
+
+### File Operations
+
+#### Saving Projects
+
+1. Click **"Save"** in the toolbar
+2. Choose location and filename
+3. File saves as JSON with all project data
+
+#### Loading Projects
+
+1. Click **"Load"** in the toolbar
+2. Select a previously saved JSON file
+3. Project data replaces current content
+
+#### Starting Fresh
+
+1. Click **"New"** in the toolbar
+2. Confirm to clear all current data
+3. Starts with a clean project template
+
+### Advanced Usage
+
+#### Task Hierarchy
+
+- Create **parent-child relationships** by setting the parent field
+- **Summary tasks** automatically calculate dates from children
+- **Expand/collapse** hierarchical structures
+
+#### Progress Tracking
+
+- Set progress percentage (0-100%) for any task
+- **Visual progress bars** show completion within Gantt bars
+- **Summary task progress** calculated from children
+
+#### Comments & Collaboration
+
+- Add **comments** to any task using the Comments tab
+- **User(Dummy, as there is no login to id users) attribution** with timestamps
+
+#### Resource Assignment
+
+- Assign **resources** (team members, equipment) to tasks
+- **Resource codes** like "R001, R002" for tracking
+
+#### Resource View #TODO
+
+- Display a second Gantt chart, with task assignments grouped by resource, so that we can see what the resource loading is like
+
+#### Custom Styling
+
+- **CSS classes** for different marker types
+- **Color coding** for different task types
+- **Weekend highlighting** and custom timeline styling
+
+## 🛠 Technical Details
+
+### Architecture
+
+- **Frontend**: Svelte 5 with modern reactive patterns
+- **Components**: SVAR Svelte component library
+- **Build Tool**: Vite for fast development and optimized builds
+- **Styling**: CSS with Willow theme integration
+
+### Key Dependencies
+
+- **wx-svelte-gantt**: Core Gantt chart functionality
+- **wx-svelte-core**: UI components (DatePicker, Field, etc.)
+- **wx-svelte-comments**: Commenting system
+- **svelte**: Reactive UI framework
+
+### Project Structure
+
+```
+src/
+├── App.svelte                 # Main application component
+├── MarkerManager.svelte       # Marker CRUD interface
+├── SimpleCustomTaskForm.svelte # Task editing form
+├── Links.svelte              # Link/dependency management
+├── MyTooltipContent.svelte   # Custom tooltip display
+├── urlCell.svelte           # URL link cell renderer
+├── gantt-styles.css         # Custom Gantt styling
+└── main.js                  # Application entry point
+```
+
+### Data Format
+
+#### Task Structure
+
+```javascript
+{
+  id: 1,                    // Unique identifier
+  text: "Task Name",        // Display name
+  start: Date,              // Start date
+  duration: 5,              // Duration in days
+  optimistic: 5,            // Optimistic duration in days
+  pessimistic: 10,          // Pessimistic duration in days
+  progress: 60,             // Completion percentage (0-100)
+  type: "task",            // task, summary, milestone, etc.
+  parent: null,            // Parent task ID for hierarchy
+  resources: "R001, R002", // Assigned resources
+  details: "Description", // Task description
+  url: "https://...",     // External link
+  comments: [...]         // Comment array
+}
+```
+
+#### Link Structure
+```javascript
+{
+  id: 1,           // Unique identifier
+  source: 2,       // Source task ID
+  target: 3,       // Target task ID
+  type: "e2s"      // end-to-start, start-to-start, etc.
+}
+```
+
+#### Marker Structure
+```javascript
+{
+  id: 1,                    // Unique identifier
+  start: Date,              // Marker date
+  text: "Milestone Name",   // Display text
+  css: "myMarkerClass"     // Optional CSS class for styling
+}
+```
+
+## 🎨 Customization
+
+### Styling
+
+- Modify `src/gantt-styles.css` for visual customization
+- **Task colors**: Update CSS for different task types
+- **Timeline appearance**: Modify grid, headers, and weekend styling
+- **Custom markers**: Add CSS classes for different marker types
+
+### Configuration
+
+- **Zoom levels**: Adjust in App.svelte `zoomConfig`
+- **Task types**: Modify `taskTypes` array
+- **Date formats**: Update `standardDateConfig`
+- **User list**: Modify `users` array for comments
+
+### Extensions
+
+- **Custom validators**: Implement in form components
+- **Export formats**: Extend file operations
+- **Integration APIs**: Add external system connectivity
+
+## 📋 Browser Compatibility
+
+- **Modern browsers**: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- **Mobile browsers**: iOS Safari 14+, Chrome Mobile 90+
+- **JavaScript**: ES2020+ features required
+- **Local file access**: Required for save/load functionality
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the GNU General Public License v3.0 License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- **SVAR Team**: For the excellent Svelte component library
+- **Svelte Team**: For the reactive UI framework
+- **Vite Team**: For the lightning-fast build tool
+
+---
+
+**Built with ❤️ using Svelte and SVAR components**
