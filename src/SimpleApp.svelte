@@ -6,6 +6,7 @@
   import Links from "./Links.svelte";
   import "./gantt-styles.css";
   import MyTooltipContent from "./MyTooltipContent.svelte";
+  import urlCell from "./urlCell.svelte";
 
   // Register the Comments component with the Editor
   registerEditorItem("comments", Comments);
@@ -55,6 +56,7 @@
 			  base_end: new Date(2023, 11, 15),
         duration: 4,
         text: "Task 2",
+        url: "https://example.com/task2",
         progress: 40,
         type: "task",
         resources: "R003",
@@ -129,6 +131,8 @@
     },
     { comp: "text", key: "resources", label: "Resources", column: "left", placeholder: "e.g., R001, R002" },
 
+    { comp: "text", key: "url", label: "URL", column: "left", placeholder: "https://www.example.com/task" },
+
     // Right column - dates, duration, and progress
     { comp: "date", key: "start", label: "Start Date", column: "right", config: standardDateConfig },
     { comp: "number", key: "duration", label: "Duration (days)", column: "right", min: 0 },
@@ -175,6 +179,7 @@
 
   const columns = [
     { id: "text", header: "Task name", flexgrow: 2 },
+    { id: "url", header: "Url", flexgrow: 1, align: "left", cell: urlCell },
     { id: "start", header: "Start date", flexgrow: 1, align: "center" },
     { id: "duration", header: "Duration", align: "center", flexgrow: 1 },
     { id: "resources", header: "Resources", flexgrow: 1, align: "center" }
@@ -593,6 +598,7 @@
             start: new Date(2023, 11, 11),
             duration: 4,
             text: "Task 2",
+            url: "https://example.com/task2",
             progress: 40,
             type: "task"
           }
