@@ -249,11 +249,11 @@
   ];
 
   const columns = [
-    { id: "text", header: "Task name", flexgrow: 2 },
+    { id: "text", header: "Task name", flexgrow: 2, editor: "text" },
     { id: "url", header: "Url", flexgrow: 1, align: "left", cell: urlCell },
     { id: "start", header: "Start date", flexgrow: 1, align: "center" },
     { id: "duration", header: "Duration", align: "center", flexgrow: 1 },
-    { id: "resources", header: "Resources", flexgrow: 1, align: "center" }
+    { id: "resources", header: "Resources", flexgrow: 1, align: "center", editor: "text" }
   ];
 
   // Task types already defined above for editor configuration
