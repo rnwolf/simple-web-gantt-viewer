@@ -60,6 +60,22 @@
     ],
     links: [
       { id: 1, source: 2, target: 3, type: "e2s" }
+    ],
+    markers: [
+      {
+        start: new Date(2023, 11, 2),
+        text: "Start Project",
+      },
+      {
+        start: new Date(2023, 11, 8),
+        text: "Today",
+        css: "myMiddleClass",
+      },
+      {
+        start: new Date(2023, 11, 25),
+        text: "End Project",
+        css: "myEndClass",
+      }
     ]
   });
 
@@ -354,12 +370,21 @@
         return finalTask;
       });
 
-      const cleanLinks = links.map((link, index) => ({
-        ...link,
+
+      const cleanLinks = links.map((link, index) => {
+        const cleanLink = { ...link};
+        // Clean up any unwanted properties
+        delete cleanLink.$p;
+
+        const finalLink = {
+          ...cleanLink,
         id: index + 1,
         source: tasks.findIndex(t => t.id === link.source) + 1,
         target: tasks.findIndex(t => t.id === link.target) + 1
-      }));
+        };
+
+        return finalLink;
+      });
 
       const projectData = {
         metadata: {
@@ -369,6 +394,7 @@
         },
         tasks: cleanTasks,
         links: cleanLinks,
+        markers: currentProjectData.markers,
         scales,
         columns,
         taskTypes
@@ -492,6 +518,22 @@
         ],
         links: [
           { id: 1, source: 2, target: 3, type: "e2s" }
+        ],
+        markers: [
+          {
+			      start: new Date(2023, 11, 2),
+			      text: "Start Project",
+		      },
+		      {
+			      start: new Date(2023, 11, 8),
+			      text: "Today",
+			      css: "myMiddleClass",
+		      },
+		      {
+		  	    start: new Date(2023, 11, 25),
+		  	    text: "End Project",
+		  	    css: "myEndClass",
+		      }
         ]
       };
 
@@ -606,6 +648,7 @@
               {init}
               tasks={currentProjectData.tasks}
               links={currentProjectData.links}
+              markers={currentProjectData.markers}
               {scales}
               {columns}
               {taskTypes}
