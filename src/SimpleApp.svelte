@@ -230,6 +230,48 @@
       console.log("🔥 Task moved:", ev);
     });
 
+    // Add double-click handler to open task editor
+    api.on("show-editor", (ev) => {
+      console.log("📝 Editor requested for task:", ev.id);
+      // Let the default editor behavior work
+      return true;
+    });
+
+    // Track link creation and deletion from visual interface
+    // Note: We need to be careful not to duplicate links that the API already manages
+    api.on("add-link", (ev) => {
+      console.log("🔗 Link added via visual interface:", ev);
+      // The API automatically manages the link internally, but we need to sync our data
+      // Don't add manually here - it causes duplicates
+      // Instead, we'll sync during save or use API to get current state
+    });
+
+    api.on("delete-link", (ev) => {
+      console.log("🗑️ Link deleted via visual interface:", ev);
+      // The API automatically manages link deletion internally
+      // We only need to remove from our local data if it exists
+      const linkId = ev.id;
+      const linkIndex = currentProjectData.links.findIndex(link => link.id === linkId);
+      if (linkIndex !== -1) {
+        currentProjectData.links.splice(linkIndex, 1);
+        console.log(`✅ Removed link ${linkId} from currentProjectData`);
+      }
+    });
+
+    api.on("update-link", (ev) => {
+      console.log("🔄 Link updated via visual interface:", ev);
+      // Update in currentProjectData if it exists
+      const linkId = ev.id;
+      const linkIndex = currentProjectData.links.findIndex(link => link.id === linkId);
+      if (linkIndex !== -1 && ev.link) {
+        currentProjectData.links[linkIndex] = {
+          ...currentProjectData.links[linkIndex],
+          ...ev.link
+        };
+        console.log(`✅ Updated link ${linkId} in currentProjectData`);
+      }
+    });
+
     console.log("Simple Gantt initialization completed - using standard SVAR behavior");
   }
 
@@ -312,12 +354,27 @@
       case "update-link":
         if (api && data.id && data.link) {
           api.exec("update-link", { id: data.id, link: data.link });
+          // Also update currentProjectData to keep it in sync
+          const linkIndex = currentProjectData.links.findIndex(link => link.id === data.id);
+          if (linkIndex !== -1) {
+            currentProjectData.links[linkIndex] = {
+              ...currentProjectData.links[linkIndex],
+              ...data.link
+            };
+            console.log(`✅ Updated link ${data.id} in currentProjectData`);
+          }
         }
         break;
 
-      case "delete-link":
+    case "delete-link":
         if (api && data.id) {
           api.exec("delete-link", { id: data.id });
+          // Also update currentProjectData to keep it in sync
+          const linkIndex = currentProjectData.links.findIndex(link => link.id === data.id);
+          if (linkIndex !== -1) {
+            currentProjectData.links.splice(linkIndex, 1);
+            console.log(`✅ Removed link ${data.id} from currentProjectData`);
+          }
         }
         break;
 
@@ -340,9 +397,21 @@
       // Get current state directly from Gantt
       const tasks = api.serialize();
 
-      // For now, use current project links data as we can't reliably access current links
-      // This is a simplified approach - in a real app you'd want to track link changes
-      const links = currentProjectData.links;
+      // Get current links from the API state instead of our tracked data
+      let links = [];
+      try {
+        const state = api.getState();
+        if (state && state.links && state.links.list) {
+          links = state.links.list();
+          console.log(`✅ Got ${links.length} links from API state`);
+        } else {
+          console.log("⚠️ Could not get links from API state, using tracked data as fallback");
+          links = currentProjectData.links;
+        }
+      } catch (error) {
+        console.log("⚠️ Error getting links from API state, using tracked data:", error.message);
+        links = currentProjectData.links;
+      }
 
       // Clean up any temporary IDs by assigning sequential numbers
       const cleanTasks = tasks.map((task, index) => {
