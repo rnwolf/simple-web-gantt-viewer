@@ -138,7 +138,14 @@ Current Version ID: 97161d48-2900-4d58-8492-f029746a4a08
 
 If you want to make this app accessable via a simple URL then set up a CNAME DNS record.
 
-https://gantt.rnwolf.net
+to map https://gantt.rnwolf.net to https://simple-web-gantt-editor.throughputfocus.workers.dev
+
+Then add route to cloudflare so that you run your Worker for a given url.
+
+```
+Route: gantt.rnwolf.net/*
+Worker: simple-web-gantt-editor
+```
 
 
 ## 🎯 Usage
