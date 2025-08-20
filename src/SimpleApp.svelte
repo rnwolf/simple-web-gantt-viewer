@@ -68,7 +68,7 @@
   let task = $state(null);
   let selectedTaskId = $state(null);
   let fileInput;
-  
+
   // Create users for the comments (following official demo pattern)
   const users = [
     { id: 1, name: "Alex" },
@@ -78,23 +78,23 @@
     { id: 5, name: "Kate" },
   ];
   const activeUser = 1;
-  
+
   // Task types definition - moved up to be available for editor config
   const taskTypes = [
     { id: "task", label: "Task" },
     { id: "summary", label: "Summary task" },
     { id: "milestone", label: "Milestone" }
   ];
-  
+
   // Configure editor items following the official demo pattern
   import { defaultEditorItems } from "wx-svelte-gantt";
-  
+
   // Use consistent YYYY-MM-DD date format for all date controls
   const standardDateConfig = {
     format: "%Y-%m-%d",
     editable: true
   };
-  
+
   // Create comprehensive editor configuration with two-column layout
   const editorItems = [
     // Left column - basic task information
@@ -108,16 +108,16 @@
       options: taskTypes
     },
     { comp: "text", key: "resources", label: "Resources", column: "left", placeholder: "e.g., R001, R002" },
-    
+
     // Right column - dates, duration, and progress
     { comp: "date", key: "start", label: "Start Date", column: "right", config: standardDateConfig },
     { comp: "number", key: "duration", label: "Duration (days)", column: "right", min: 0 },
     { comp: "date", key: "end", label: "End Date", column: "right", config: standardDateConfig },
     { comp: "slider", key: "progress", label: "Progress (%)", column: "right", min: 0, max: 100 },
-    
+
     // Links (Predecessors and Successors combined)
     { comp: "links", key: "links", label: "Task Dependencies" },
-    
+
     // Comments section (can span full width)
     {
       key: "comments",
@@ -127,7 +127,7 @@
       activeUser,
     }
   ];
-  
+
   // Editor configuration with events handler to fix date/duration calculations
   const editorConfig = {
     placement: "sidebar", // or "modal" for popup
@@ -135,7 +135,7 @@
     autoSave: false, // Set to false to handle updates in the onChange event
     items: editorItems
   };
-  
+
   // Date controls
   let start = $state(new Date(2023, 11, 1));
   let end = $state(new Date(2023, 11, 29));
@@ -166,7 +166,7 @@
     try {
       // Generate a temporary ID
       const tempId = `temp://${Date.now()}`;
-      
+
       // Create a new task
       const newTask = {
         id: tempId,
@@ -180,7 +180,7 @@
 
       // Add the task using the API
       api.exec("add-task", { task: newTask });
-      
+
       console.log("Added new task:", newTask);
     } catch (error) {
       console.error("Error adding new task:", error);
@@ -194,65 +194,65 @@
   // Initialize - simplified setup like the official demo
   function init(api) {
     console.log("Initializing simple Gantt");
-    
+
     // Expose functions globally so they can be called
     window.addNewTask = addNewTask;
-    
+
     // Listen for task selection to enable comments button
     api.on("select-task", (ev) => {
       const { id } = ev;
       console.log("Task selected:", id);
       selectedTaskId = id;
     });
-    
+
     // Optional: Add basic event logging to see what's happening
     api.on("update-task", (ev) => {
       console.log("🔥 Task updated via drag/form:", ev);
     });
-    
+
     api.on("move-task", (ev) => {
       console.log("🔥 Task moved:", ev);
     });
-    
+
     console.log("Simple Gantt initialization completed - using standard SVAR behavior");
   }
-  
+
   // Handle editor changes with proper date/duration synchronization (only for form edits)
   function handleEditorChange(ev) {
     console.log("=== EDITOR CHANGE EVENT ===");
     console.log("Editor action:", ev);
-    
+
     const { action, id, values } = ev;
-    
+
     // Handle different editor actions
     if (action === "save-task" && api && id && values) {
       console.log("Saving task from editor:", { id, values });
-      
+
       // Apply date/duration synchronization for form edits only
       let updatedTask = { ...values };
-      
+
       // Convert duration to number if it's a string
       if (updatedTask.duration !== undefined) {
         updatedTask.duration = parseInt(updatedTask.duration) || 0;
         console.log("Converted duration to number:", updatedTask.duration);
       }
-      
+
       // Handle milestone type
       if (updatedTask.type === "milestone") {
         updatedTask.duration = 0;
         console.log("Set duration to 0 for milestone");
       }
-      
+
       // Recalculate end date when duration or start date exist
       if (updatedTask.start && updatedTask.duration !== undefined && updatedTask.duration > 0) {
         const startDate = new Date(updatedTask.start);
         const endDate = new Date(startDate);
         endDate.setDate(startDate.getDate() + updatedTask.duration);
         updatedTask.end = endDate;
-        
+
         console.log(`✅ Synchronized: Start ${startDate} + ${updatedTask.duration} days = End ${endDate}`);
       }
-      
+
       // Update the task
       try {
         api.exec("update-task", { id, task: updatedTask });
@@ -264,7 +264,7 @@
       console.log("Deleting task from editor:", id);
       api.exec("delete-task", { id });
     }
-    
+
     console.log("=== END EDITOR CHANGE ===");
   }
 
@@ -323,7 +323,7 @@
     try {
       // Get current state directly from Gantt
       const tasks = api.serialize();
-      
+
       // For now, use current project links data as we can't reliably access current links
       // This is a simplified approach - in a real app you'd want to track link changes
       const links = currentProjectData.links;
@@ -331,26 +331,26 @@
       // Clean up any temporary IDs by assigning sequential numbers
       const cleanTasks = tasks.map((task, index) => {
         const cleanTask = { ...task };
-        
+
         // Clean up any unwanted properties but preserve comments
         delete cleanTask.data;
         delete cleanTask.$x;
         delete cleanTask.$y;
         delete cleanTask.$w;
         delete cleanTask.$h;
-        
+
         // Ensure comments are preserved if they exist
         const finalTask = {
           ...cleanTask,
           id: index + 1,
           parent: task.parent ? tasks.findIndex(t => t.id === task.parent) + 1 : undefined
         };
-        
+
         // Preserve comments if they exist
         if (task.comments && Array.isArray(task.comments)) {
           finalTask.comments = task.comments;
         }
-        
+
         return finalTask;
       });
 
@@ -405,7 +405,7 @@
     reader.onload = function(e) {
       try {
         const jsonData = JSON.parse(e.target.result);
-        
+
         if (!jsonData.tasks || !Array.isArray(jsonData.tasks)) {
           alert("Invalid project file - missing tasks");
           return;
@@ -418,17 +418,17 @@
             start: new Date(task.start),
             end: task.end ? new Date(task.end) : undefined
           };
-          
+
           // Explicitly preserve comments if they exist
           if (task.comments && Array.isArray(task.comments)) {
             processedTask.comments = task.comments;
             console.log(`Loaded ${task.comments.length} comments for task: ${task.text}`);
           }
-          
+
           return processedTask;
         });
 
-        
+
         // Update our reactive state - this should trigger Gantt re-render
         currentProjectData = {
           tasks: processedTasks,
@@ -494,16 +494,16 @@
           { id: 1, source: 2, target: 3, type: "e2s" }
         ]
       };
-      
-      
+
+
       // Update reactive state - this should trigger Gantt re-render
       currentProjectData = initialData;
-      
+
       console.log("New project created with:", {
         tasksCount: initialData.tasks.length,
         linksCount: initialData.links.length
       });
-      
+
       alert("New project created!");
     }
   }
@@ -561,6 +561,7 @@
 
   <div class="gantt-container">
     <Willow>
+      <div class="ganttCell">
       <Locale>
         <div class="bar">
           <Field label="Project Start" position="left">
@@ -617,6 +618,7 @@
           <Editor {api} items={editorItems} autoSave={false} onaction={handleEditorChange} />
         </Tooltip>
       </ContextMenu>
+      </div>
     </Willow>
   </div>
 
@@ -799,4 +801,14 @@
     z-index: 1;
     overflow: visible;
   }
+
+  /*  ganttCell style ensures that the bottom horizontal slider does not overlap with the task bars */
+  .ganttCell {
+		height: 410px;
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		margin-bottom: 10px;
+	}
+
 </style>
