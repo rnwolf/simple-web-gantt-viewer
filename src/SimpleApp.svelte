@@ -37,6 +37,8 @@
         id: 2,
         parent: 1,
         start: new Date(2023, 11, 6),
+        base_start: new Date(2023, 11, 5),
+			  base_end: new Date(2023, 11, 9),
         duration: 4,
         text: "Task 1",
         progress: 80,
@@ -49,6 +51,8 @@
         id: 3,
         parent: 1,
         start: new Date(2023, 11, 11),
+        base_start: new Date(2023, 11, 11),
+			  base_end: new Date(2023, 11, 15),
         duration: 4,
         text: "Task 2",
         progress: 40,
@@ -131,6 +135,10 @@
     { comp: "date", key: "end", label: "End Date", column: "right", config: standardDateConfig },
     { comp: "slider", key: "progress", label: "Progress (%)", column: "right", min: 0, max: 100 },
 
+    // Right column - base dates
+    { comp: "date", key: "base_start", label: "Baseline Start Date", column: "right", config: standardDateConfig },
+    { comp: "date", key: "base_end", label: "Baseline End Date", column: "right", config: standardDateConfig },
+
     // Links (Predecessors and Successors combined)
     { comp: "links", key: "links", label: "Task Dependencies" },
 
@@ -156,6 +164,8 @@
   let start = $state(new Date(2023, 11, 1));
   let end = $state(new Date(2023, 11, 29));
   let autoScale = $state(false);
+  let baseline = $state(false);
+
 
   // Gantt configuration
   const scales = [
@@ -570,6 +580,8 @@
             id: 2,
             parent: 1,
             start: new Date(2023, 11, 6),
+            base_start: new Date(2023, 11, 4),
+		    	  base_end: new Date(2023, 11, 8),
             duration: 4,
             text: "Task 1",
             progress: 80,
@@ -692,6 +704,14 @@
               </div>
             {/snippet}
           </Field>
+          <Field label="Baseline" position="left">
+            {#snippet children({ id })}
+              <div class="input">
+                <Switch bind:value={baseline} {id} />
+              </div>
+            {/snippet}
+          </Field>
+
         </div>
       </Locale>
 
@@ -718,6 +738,7 @@
               tasks={currentProjectData.tasks}
               links={currentProjectData.links}
               markers={currentProjectData.markers}
+              baselines={baseline}
               {scales}
               {columns}
               {taskTypes}
