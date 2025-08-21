@@ -333,38 +333,85 @@
     });
 
     // Track link creation and deletion from visual interface
-    // Note: We need to be careful not to duplicate links that the API already manages
+    // Maintain a local mirror immediately from the event payload, then sync from API state
+
+    function normalizeEndpoint(raw) {
+      if (raw == null) return null;
+      if (typeof raw === 'object') {
+        if (raw.id != null) return raw.id;
+        if (raw.source != null) return raw.source;
+        if (raw.target != null) return raw.target;
+        if (raw.from != null) return raw.from;
+        if (raw.to != null) return raw.to;
+        return null;
+      }
+      return raw;
+    }
+
+    function upsertLinkFromEvent(ev) {
+      const payload = ev.link ?? ev;
+      if (!payload) return;
+      const rawSource = payload.source ?? payload.from ?? payload.sourceId ?? payload.src ?? payload.start ?? payload.s;
+      const rawTarget = payload.target ?? payload.to ?? payload.targetId ?? payload.dst ?? payload.end ?? payload.t;
+      const source = normalizeEndpoint(rawSource);
+      const target = normalizeEndpoint(rawTarget);
+      if (source == null || target == null) return;
+      const id = payload.id ?? Math.max(0, ...(currentProjectData.links || []).map(l => l.id || 0)) + 1;
+      const type = payload.type || 'e2s';
+      // Initialize links array if needed
+      if (!Array.isArray(currentProjectData.links)) currentProjectData.links = [];
+      // Remove any existing with same id
+      const idx = currentProjectData.links.findIndex(l => l.id === id);
+      const newLink = { id, source, target, type };
+      if (idx === -1) currentProjectData.links.push(newLink);
+      else currentProjectData.links[idx] = newLink;
+    }
+
+    function removeLinkFromEvent(ev) {
+      const id = ev.id ?? ev.link?.id;
+      if (id == null || !Array.isArray(currentProjectData.links)) return;
+      const idx = currentProjectData.links.findIndex(l => l.id === id);
+      if (idx !== -1) currentProjectData.links.splice(idx, 1);
+    }
+
     api.on("add-link", (ev) => {
       console.log("🔗 Link added via visual interface:", ev);
-      // The API automatically manages the link internally, but we need to sync our data
-      // Don't add manually here - it causes duplicates
-      // Instead, we'll sync during save or use API to get current state
+      upsertLinkFromEvent(ev);
+      // Defer a tick to let internal stores settle, then sync from API
+      setTimeout(() => {
+        try {
+          currentProjectData.links = getLinksSnapshot();
+          console.log(`✅ Synced ${currentProjectData.links.length} links from API state (add)`);
+        } catch (e) {
+          console.warn("⚠️ Could not sync links after add-link:", e);
+        }
+      }, 0);
     });
 
     api.on("delete-link", (ev) => {
       console.log("🗑️ Link deleted via visual interface:", ev);
-      // The API automatically manages link deletion internally
-      // We only need to remove from our local data if it exists
-      const linkId = ev.id;
-      const linkIndex = currentProjectData.links.findIndex(link => link.id === linkId);
-      if (linkIndex !== -1) {
-        currentProjectData.links.splice(linkIndex, 1);
-        console.log(`✅ Removed link ${linkId} from currentProjectData`);
-      }
+      removeLinkFromEvent(ev);
+      setTimeout(() => {
+        try {
+          currentProjectData.links = getLinksSnapshot();
+          console.log(`✅ Synced ${currentProjectData.links.length} links from API state (delete)`);
+        } catch (e) {
+          console.warn("⚠️ Could not sync links after delete-link:", e);
+        }
+      }, 0);
     });
 
     api.on("update-link", (ev) => {
       console.log("🔄 Link updated via visual interface:", ev);
-      // Update in currentProjectData if it exists
-      const linkId = ev.id;
-      const linkIndex = currentProjectData.links.findIndex(link => link.id === linkId);
-      if (linkIndex !== -1 && ev.link) {
-        currentProjectData.links[linkIndex] = {
-          ...currentProjectData.links[linkIndex],
-          ...ev.link
-        };
-        console.log(`✅ Updated link ${linkId} in currentProjectData`);
-      }
+      upsertLinkFromEvent(ev);
+      setTimeout(() => {
+        try {
+          currentProjectData.links = getLinksSnapshot();
+          console.log(`✅ Synced ${currentProjectData.links.length} links from API state (update)`);
+        } catch (e) {
+          console.warn("⚠️ Could not sync links after update-link:", e);
+        }
+      }, 0);
     });
 
     console.log("Simple Gantt initialization completed - using standard SVAR behavior");
@@ -481,6 +528,33 @@
     }
   }
 
+  // Helper: get a robust snapshot of links from the API state with safe fallbacks
+  function getLinksSnapshot() {
+    try {
+      const state = api?.getState?.();
+      if (state) {
+        const candidates = [
+          () => state?.links?.list?.(),
+          () => state?.links?.serialize?.(),
+          () => state?.links?.all?.(),
+          () => state?.links?.data,
+          () => (Array.isArray(state?.links) ? state.links : null)
+        ];
+        for (const getter of candidates) {
+          try {
+            const v = getter?.();
+            if (Array.isArray(v)) return v;
+            if (v && typeof v === 'object' && Array.isArray(v.items)) return v.items;
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      console.warn('getLinksSnapshot() failed to access api state:', e);
+    }
+    // Last resort: return our local mirror if present, or empty array
+    return Array.isArray(currentProjectData.links) ? currentProjectData.links : [];
+  }
+
   // Simple save function
   function saveProject() {
     if (!api) {
@@ -492,63 +566,131 @@
       // Get current state directly from Gantt
       const tasks = api.serialize();
 
-      // Get current links from the API state instead of our tracked data
-      let links = [];
-      try {
-        const state = api.getState();
-        if (state && state.links && state.links.list) {
-          links = state.links.list();
-          console.log(`✅ Got ${links.length} links from API state`);
-        } else {
-          console.log("⚠️ Could not get links from API state, using tracked data as fallback");
-          links = currentProjectData.links;
+      // Always try to take links from API state; fall back to our local mirror
+      let links = getLinksSnapshot();
+      // Drop obviously invalid links early (missing endpoints props)
+      links = Array.isArray(links) ? links.filter(l => (l && (l.source != null || l.from != null) && (l.target != null || l.to != null))) : [];
+      console.log(`🔎 Saving with ${links.length} link(s) after pre-filter`);
+
+      // Detect temp IDs; if present, save "raw" IDs to preserve link consistency
+      const hasTempIds = tasks.some(t => typeof t.id === 'string' && t.id.startsWith('temp://'));
+
+      function normalizeEndpoint(raw) {
+        if (raw == null) return null;
+        if (typeof raw === 'object') {
+          // common nested shapes
+          if (raw.id != null) return raw.id;
+          if (raw.source != null) return raw.source;
+          if (raw.target != null) return raw.target;
+          if (raw.from != null) return raw.from;
+          if (raw.to != null) return raw.to;
+          return null;
         }
-      } catch (error) {
-        console.log("⚠️ Error getting links from API state, using tracked data:", error.message);
-        links = currentProjectData.links;
+        return raw; // assume primitive id
       }
 
-      // Clean up any temporary IDs by assigning sequential numbers
-      const cleanTasks = tasks.map((task, index) => {
-        const cleanTask = { ...task };
+      let cleanTasks;
+      let cleanLinks;
 
-        // Clean up any unwanted properties but preserve comments
-        delete cleanTask.data;
-        delete cleanTask.$x;
-        delete cleanTask.$y;
-        delete cleanTask.$w;
-        delete cleanTask.$h;
+      if (hasTempIds) {
+        console.log('⚠️ Temp IDs detected; saving raw IDs for tasks and links');
+        // Keep original IDs so links remain valid
+        cleanTasks = tasks.map(task => {
+          const cleanTask = { ...task };
+          delete cleanTask.data; delete cleanTask.$x; delete cleanTask.$y; delete cleanTask.$w; delete cleanTask.$h;
+          // Preserve comments
+          if (task.comments && Array.isArray(task.comments)) cleanTask.comments = task.comments;
+          return cleanTask;
+        });
 
-        // Ensure comments are preserved if they exist
-        const finalTask = {
-          ...cleanTask,
-          id: index + 1,
-          parent: task.parent ? tasks.findIndex(t => t.id === task.parent) + 1 : undefined
-        };
-
-        // Preserve comments if they exist
-        if (task.comments && Array.isArray(task.comments)) {
-          finalTask.comments = task.comments;
+        const taskIdSet = new Set(tasks.map(t => t.id));
+        function resolveToTaskId(key) {
+          if (key == null) return null;
+          if (taskIdSet.has(key)) return key;
+          // If numeric index, try map to tasks[index] or tasks[index-1]
+          const n = typeof key === 'number' ? key : Number.isFinite(parseFloat(key)) ? parseInt(key) : NaN;
+          if (!Number.isNaN(n)) {
+            if (n >= 0 && n < tasks.length) return tasks[n].id;
+            if (n - 1 >= 0 && n - 1 < tasks.length) return tasks[n - 1].id;
+          }
+          return null;
         }
 
-        return finalTask;
-      });
+        function deepExtract(obj, maxDepth = 3) {
+          if (obj == null || maxDepth < 0) return null;
+          if (typeof obj !== 'object') return obj;
+          const preferredKeys = ['id','source','target','from','to','sourceId','targetId','src','dst','start','end','s','t','task','taskId'];
+          for (const k of preferredKeys) {
+            if (obj[k] != null) return deepExtract(obj[k], maxDepth - 1);
+          }
+          // As a fallback, scan values
+          for (const v of Object.values(obj)) {
+            const ex = deepExtract(v, maxDepth - 1);
+            if (ex != null) return ex;
+          }
+          return null;
+        }
 
+        cleanLinks = links.map((link, index) => {
+          const cleanLink = { ...link };
+          delete cleanLink.$p;
+          // Normalize endpoints but do not remap
+          const rawSource = link.source ?? link.from ?? link.sourceId ?? link.src ?? link.start ?? link.s ?? link.sourceTask ?? link.startTask;
+          const rawTarget = link.target ?? link.to ?? link.targetId ?? link.dst ?? link.end ?? link.t ?? link.targetTask ?? link.endTask;
+          let source = normalizeEndpoint(rawSource);
+          let target = normalizeEndpoint(rawTarget);
+          if (source == null) source = deepExtract(rawSource);
+          if (target == null) target = deepExtract(rawTarget);
+          // Try to resolve to actual task ids if endpoints look like indices
+          const resolvedSource = resolveToTaskId(source);
+          const resolvedTarget = resolveToTaskId(target);
+          if (resolvedSource == null || resolvedTarget == null) {
+            console.warn('⚠️ Skipping link with missing/raw-unresolvable endpoints:', { link, source, target });
+            return null;
+          }
+          if (resolvedSource === resolvedTarget) {
+            console.warn('⚠️ Skipping self-referential link:', { link, resolvedSource, resolvedTarget });
+            return null;
+          }
+          return { id: cleanLink.id ?? (index + 1), type: cleanLink.type || 'e2s', source: resolvedSource, target: resolvedTarget };
+        }).filter(Boolean);
+      } else {
+        // No temp IDs; remap to stable numeric ids
+        const idMap = new Map(); // originalId -> newId (1..N)
+        tasks.forEach((t, i) => idMap.set(t.id, i + 1));
 
-      const cleanLinks = links.map((link, index) => {
-        const cleanLink = { ...link};
-        // Clean up any unwanted properties
-        delete cleanLink.$p;
+        cleanTasks = tasks.map((task, index) => {
+          const cleanTask = { ...task };
+          delete cleanTask.data; delete cleanTask.$x; delete cleanTask.$y; delete cleanTask.$w; delete cleanTask.$h;
+          const finalTask = {
+            ...cleanTask,
+            id: idMap.get(task.id) || (index + 1),
+            parent: task.parent != null ? idMap.get(task.parent) : undefined
+          };
+          if (task.comments && Array.isArray(task.comments)) finalTask.comments = task.comments;
+          return finalTask;
+        });
 
-        const finalLink = {
-          ...cleanLink,
-          id: index + 1,
-          source: tasks.findIndex(t => t.id === link.source) + 1,
-          target: tasks.findIndex(t => t.id === link.target) + 1
-        };
-
-        return finalLink;
-      });
+        cleanLinks = links.map((link, index) => {
+          const cleanLink = { ...link };
+          delete cleanLink.$p;
+          const rawSource = link.source ?? link.from ?? link.sourceId ?? link.src ?? link.start ?? link.s;
+          const rawTarget = link.target ?? link.to ?? link.targetId ?? link.dst ?? link.end ?? link.t;
+          const srcKey = normalizeEndpoint(rawSource);
+          const tgtKey = normalizeEndpoint(rawTarget);
+          const source = idMap.get(srcKey);
+          const target = idMap.get(tgtKey);
+          if (!source || !target) {
+            console.warn('⚠️ Skipping link with unmapped endpoints:', { link, srcKey, tgtKey });
+            return null;
+          }
+          if (source === target) {
+            console.warn('⚠️ Skipping self-referential link after remap:', { link, srcKey, tgtKey, source, target });
+            return null;
+          }
+          return { id: index + 1, type: cleanLink.type || 'e2s', source, target };
+        }).filter(Boolean);
+      }
 
       const projectData = {
         metadata: {
