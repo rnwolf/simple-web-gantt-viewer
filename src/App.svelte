@@ -950,40 +950,64 @@
 
   function createNewProject() {
     if (confirm("Create new project? This will clear all current data.")) {
-      // Reset to initial data
+      // Compute dates relative to 'today'
+      const today = new Date();
+      const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const projectStart = new Date(startOfToday);
+      projectStart.setDate(projectStart.getDate() + 1); // start tomorrow by default
+
+      const task1Start = new Date(projectStart);
+      const task1Duration = 4;
+      const task1End = new Date(task1Start);
+      task1End.setDate(task1End.getDate() + task1Duration);
+
+      const task2Start = new Date(task1End);
+      const task2Duration = 4;
+      const task2End = new Date(task2Start);
+      task2End.setDate(task2End.getDate() + task2Duration);
+
+      // Root summary duration auto-computed by Gantt, but provide a rough duration
+      const rootDurationDays = Math.max(1, Math.ceil((task2End.getTime() - projectStart.getTime()) / (1000 * 60 * 60 * 24)));
+
+      // Baseline dates (optional): set 2 days before starts
+      const baseStart1 = new Date(task1Start); baseStart1.setDate(baseStart1.getDate() - 2);
+      const baseEnd1 = new Date(task1End); baseEnd1.setDate(baseEnd1.getDate() - 2);
+
       const initialData = {
         tasks: [
           {
             id: 1,
             open: true,
-            start: new Date(2023, 11, 6),
-            duration: 8,
+            start: projectStart,
+            duration: rootDurationDays,
             text: "Project Root",
-            progress: 60,
+            progress: 0,
             type: "summary"
           },
           {
             id: 2,
             parent: 1,
-            start: new Date(2023, 11, 6),
-            base_start: new Date(2023, 11, 4),
-		    	  base_end: new Date(2023, 11, 8),
-            duration: 4,
-            optimistic: 10,
-            pessimistic: 15,
+            start: task1Start,
+            base_start: baseStart1,
+            base_end: baseEnd1,
+            duration: task1Duration,
+            optimistic: task1Duration - 1,
+            pessimistic: task1Duration + 2,
             text: "Task 1",
-            progress: 80,
-            type: "task"
+            progress: 0,
+            type: "task",
+            resources: "Resource-A"
           },
           {
             id: 3,
             parent: 1,
-            start: new Date(2023, 11, 11),
-            duration: 4,
+            start: task2Start,
+            duration: task2Duration,
             text: "Task 2",
             url: "https://example.com/task2",
-            progress: 40,
-            type: "task"
+            progress: 0,
+            type: "task",
+            resources: "Resource-A, Resource-B"
           }
         ],
         links: [
@@ -992,31 +1016,38 @@
         markers: [
           {
             id: 1,
-			      start: new Date(2023, 11, 2),
-			      text: "Start Project",
-		      },
-		      {
+            start: projectStart,
+            text: "Start Project",
+          },
+          {
             id: 2,
-			      start: new Date(2023, 11, 8),
-			      text: "Today",
-			      css: "myMiddleClass",
-		      },
-		      {
+            start: startOfToday,
+            text: "Today",
+            css: "myMiddleClass",
+          },
+          {
             id: 3,
-		  	    start: new Date(2023, 11, 25),
-		  	    text: "End Project",
-		  	    css: "myEndClass",
-		      }
+            start: (() => { const d = new Date(projectStart); d.setDate(d.getDate() + 20); return d; })(),
+            text: "End Project",
+            css: "myEndClass",
+          }
         ]
       };
-
 
       // Update reactive state - this should trigger Gantt re-render
       currentProjectData = initialData;
 
+      // Also update the visible timeline to a sensible window around the project
+      const timelineStart = new Date(startOfToday); timelineStart.setDate(timelineStart.getDate() - 3);
+      const timelineEnd = new Date(projectStart); timelineEnd.setDate(timelineEnd.getDate() + 30);
+      start = timelineStart;
+      end = timelineEnd;
+
       console.log("New project created with:", {
         tasksCount: initialData.tasks.length,
-        linksCount: initialData.links.length
+        linksCount: initialData.links.length,
+        timelineStart,
+        timelineEnd
       });
 
       alert("New project created!");
