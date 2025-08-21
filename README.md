@@ -206,6 +206,33 @@ Worker: simple-web-gantt-editor
 
 ### File Operations
 
+#### Excel Import/Export helper (Python)
+
+A helper script is provided to convert between the JSON project format and an Excel workbook.
+
+Prerequisites: Astral’s uv (no virtualenv needed). The script declares its dependencies inline.
+
+- Export JSON -> Excel
+  ```bash
+  uv run scripts/gantt_excel_helper.py to-xlsx --in docs/gantt-project-2025-08-21.json --out out.xlsx
+  ```
+
+- Import Excel -> JSON
+  ```bash
+  uv run scripts/gantt_excel_helper.py to-json --in out.xlsx --out out.json --project-name "My Plan"
+  ```
+
+- Optional: Override timeline window when importing
+  ```bash
+  uv run scripts/gantt_excel_helper.py to-json --in out.xlsx --out out.json \
+    --timeline-start 2025-08-10T00:00:00Z --timeline-end 2025-09-30T00:00:00Z
+  ```
+
+Notes:
+- The Excel file uses two sheets: Tasks and Links (Tasks required; Links optional).
+- Dates may be Excel dates or ISO strings; they will be converted to ISO 8601 Z times in JSON.
+- The import generates metadata (including timeline), and includes default arrays for `scales`, `columns`, and `taskTypes` so the file loads in the editor out-of-the-box.
+
 #### Saving Projects
 
 1. Click **"Save"** in the toolbar

@@ -257,6 +257,12 @@ TIP: Save the Resource view and open it in a second browser window. Arrange it s
 - **Component Architecture**: Modular, reusable SVAR components
 
 
+## 🚀 Enhancements
+
+- Excel/JSON Timezone Handling (planned):
+  - Current behavior: JSON UTC (Z) datetimes are exported to Excel as naive datetimes preserving the same UTC wall clock; Excel naive datetimes are imported as UTC back to JSON.
+  - Planned flag: Add a converter option `--tz-behaviour local` to export/import using the user's local timezone semantics instead of UTC-preserving mapping. This would be useful for spreadsheets intended for teams working exclusively in local time.
+
 ## ❓ FAQ
 
 - Why can’t I see my project tasks after loading a file?
