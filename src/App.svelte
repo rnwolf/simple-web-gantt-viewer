@@ -249,6 +249,7 @@
   let end = $state(new Date(2023, 11, 29));
   let autoScale = $state(false);
   let baseline = $state(false);
+  let normalizeIdsOnSave = $state(true);
 
 
   // Gantt configuration
@@ -572,8 +573,9 @@
       links = Array.isArray(links) ? links.filter(l => (l && (l.source != null || l.from != null) && (l.target != null || l.to != null))) : [];
       console.log(`🔎 Saving with ${links.length} link(s) after pre-filter`);
 
-      // Detect temp IDs; if present, save "raw" IDs to preserve link consistency
+      // Decide whether to normalize IDs even if temp IDs exist
       const hasTempIds = tasks.some(t => typeof t.id === 'string' && t.id.startsWith('temp://'));
+      const forceNormalize = !!normalizeIdsOnSave;
 
       function normalizeEndpoint(raw) {
         if (raw == null) return null;
@@ -592,8 +594,8 @@
       let cleanTasks;
       let cleanLinks;
 
-      if (hasTempIds) {
-        console.log('⚠️ Temp IDs detected; saving raw IDs for tasks and links');
+      if (hasTempIds && !forceNormalize) {
+        console.log('⚠️ Temp IDs detected; saving raw IDs for tasks and links (normalization disabled)');
         // Keep original IDs so links remain valid
         cleanTasks = tasks.map(task => {
           const cleanTask = { ...task };
@@ -696,7 +698,8 @@
         metadata: {
           projectName: "Simple Gantt Project",
           exportDate: new Date().toISOString(),
-          version: "1.0.0"
+          version: "1.0.0",
+          normalizedIds: !!forceNormalize || !hasTempIds
         },
         tasks: cleanTasks,
         links: cleanLinks,
@@ -1162,6 +1165,13 @@
             {#snippet children({ id })}
               <div class="input">
                 <Switch bind:value={baseline} {id} />
+              </div>
+            {/snippet}
+          </Field>
+          <Field label="Normalize IDs on save" position="left">
+            {#snippet children({ id })}
+              <div class="input">
+                <Switch bind:value={normalizeIdsOnSave} {id} />
               </div>
             {/snippet}
           </Field>
