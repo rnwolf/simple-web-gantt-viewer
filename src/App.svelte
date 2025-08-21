@@ -542,9 +542,9 @@
 
         const finalLink = {
           ...cleanLink,
-        id: index + 1,
-        source: tasks.findIndex(t => t.id === link.source) + 1,
-        target: tasks.findIndex(t => t.id === link.target) + 1
+          id: index + 1,
+          source: tasks.findIndex(t => t.id === link.source) + 1,
+          target: tasks.findIndex(t => t.id === link.target) + 1
         };
 
         return finalLink;
@@ -583,6 +583,155 @@
     } catch (error) {
       console.error("Error saving project:", error);
       alert(`Error saving project: ${error.message}`);
+    }
+  }
+
+  // Transform-and-download: Resource-centric project view
+  function downloadResourceView() {
+    if (!api) {
+      alert("Gantt not ready");
+      return;
+    }
+
+    try {
+      const tasks = api.serialize();
+
+      // Build a quick lookup of original tasks by id
+      const taskById = new Map(tasks.map(t => [t.id, t]));
+
+      // Helper to parse resources string into array of codes
+      const parseResources = (r) =>
+        (typeof r === 'string' ? r.split(',') : [])
+          .map(x => x.trim())
+          .filter(Boolean);
+
+      // For reliable dates
+      function ensureEnd(t) {
+        if (t.end instanceof Date && !isNaN(t.end)) return t.end;
+        if (t.start) {
+          const s = new Date(t.start);
+          if (!isNaN(s) && t.duration && t.duration > 0) {
+            const e = new Date(s);
+            e.setDate(s.getDate() + t.duration);
+            return e;
+          }
+        }
+        return undefined;
+      }
+
+      // Collect resources and partition tasks (drop tasks with no resources)
+      const resourceToTasks = new Map(); // r => [taskIds]
+      for (const t of tasks) {
+        const rs = parseResources(t.resources);
+        if (rs.length === 0) continue; // drop unassigned
+        for (const r of rs) {
+          if (!resourceToTasks.has(r)) resourceToTasks.set(r, []);
+          resourceToTasks.get(r).push(t.id);
+        }
+      }
+
+      // Build new task list: summaries per resource + children duplicates
+      const newTasks = [];
+      const duplicateMap = new Map(); // key: `${origId}|${groupKey}` => newId
+
+      let nextId = 1;
+
+      function addSummaryWithChildren(groupKey, title, origIds) {
+        // Create summary
+        const summaryId = nextId++;
+        const childIds = [];
+
+        // Duplicate each task under this summary
+        for (const oid of origIds) {
+          const orig = taskById.get(oid);
+          if (!orig) continue;
+          const end = ensureEnd(orig);
+          const dup = {
+            ...orig,           // retain as much info as possible (url, resources, etc.)
+            id: nextId++,
+            parent: summaryId,
+            type: 'progress',  // child tasks should be of type "progress"
+            // strip internal fields if any
+            data: undefined,
+            $x: undefined,
+            $y: undefined,
+            $w: undefined,
+            $h: undefined,
+            end
+          };
+          newTasks.push(dup);
+          childIds.push(dup.id);
+          duplicateMap.set(`${oid}|${groupKey}`, dup.id);
+        }
+
+        // Compute summary start/end/duration from children
+        let start = undefined, end = undefined;
+        for (const cid of childIds) {
+          const ct = newTasks.find(t => t.id === cid);
+          if (!ct) continue;
+          const cs = ct.start ? new Date(ct.start) : undefined;
+          const ce = ensureEnd(ct);
+          if (cs && !isNaN(cs)) {
+            start = !start || cs < start ? cs : start;
+          }
+          if (ce && !isNaN(ce)) {
+            end = !end || ce > end ? ce : end;
+          }
+        }
+        let duration;
+        if (start && end) {
+          const ms = end.getTime() - start.getTime();
+          duration = Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+        }
+
+        newTasks.push({
+          id: summaryId,
+          text: title, // "Resource: {RESOURCE}"
+          type: 'summary',
+          open: true,
+          start: start || undefined,
+          end: end || undefined,
+          duration: duration || undefined
+        });
+      }
+
+      // Add each resource group
+      for (const [r, ids] of resourceToTasks.entries()) {
+        addSummaryWithChildren(r, `Resource: ${r}`, ids);
+      }
+
+      // Per requirements: no links in this export
+      const projectData = {
+        metadata: {
+          projectName: 'Resource-centric export',
+          exportDate: new Date().toISOString(),
+          version: '1.0.0',
+          view: 'by-resource'
+        },
+        tasks: newTasks,
+        links: [],
+        markers: currentProjectData.markers,
+        scales,
+        columns,
+        taskTypes
+      };
+
+      const jsonString = JSON.stringify(projectData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `gantt-project-by-resource-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert('Resource-centric project exported successfully!');
+    } catch (err) {
+      console.error('Error exporting resource-centric view:', err);
+      alert(`Error exporting resource-centric view: ${err.message}`);
     }
   }
 
@@ -895,6 +1044,9 @@
               <button class="toolbar-btn markers" onclick={openMarkerManager} title="Manage Markers">
                 📍 Markers
               </button>
+              <button class="toolbar-btn resource-export" onclick={downloadResourceView} title="Export Resource View">
+                👥 Resources
+              </button>
             </div>
           </div>
           <Fullscreen hotkey="ctrl+shift+f">
@@ -1001,7 +1153,7 @@
     background-color: transparent;
     color: var(--wx-color-font);
     border-radius: 50px;
-    border: 1px solid #00bcd4
+    border: 3px solid #00bcd4
   }
 
   :global(.wx-gantt .wx-bar.wx-task.progress .wx-progress-percent) {
@@ -1197,6 +1349,17 @@
   .toolbar-btn.markers:hover {
     background-color: #5a2a9d;
     border-color: #5a2a9d;
+  }
+
+  .toolbar-btn.resource-export {
+    background-color: #0d6efd;
+    color: white;
+    border-color: #0d6efd;
+  }
+
+  .toolbar-btn.resource-export:hover {
+    background-color: #0b5ed7;
+    border-color: #0b5ed7;
   }
 
 </style>
