@@ -699,7 +699,9 @@
           projectName: "Simple Gantt Project",
           exportDate: new Date().toISOString(),
           version: "1.0.0",
-          normalizedIds: !!forceNormalize || !hasTempIds
+          normalizedIds: !!forceNormalize || !hasTempIds,
+          timelineStart: start instanceof Date ? start.toISOString() : undefined,
+          timelineEnd: end instanceof Date ? end.toISOString() : undefined
         },
         tasks: cleanTasks,
         links: cleanLinks,
@@ -851,7 +853,10 @@
           projectName: 'Resource-centric export',
           exportDate: new Date().toISOString(),
           version: '1.0.0',
-          view: 'by-resource'
+          view: 'by-resource',
+          normalizedIds: !!forceNormalize || !hasTempIds,
+          timelineStart: start instanceof Date ? start.toISOString() : undefined,
+          timelineEnd: end instanceof Date ? end.toISOString() : undefined
         },
         tasks: newTasks,
         links: [],
@@ -924,6 +929,45 @@
           links: jsonData.links || [],
           markers: processedMarkers
         };
+
+        // Determine and set the visible timeline window so the project is immediately visible
+        const metaStart = jsonData.metadata?.timelineStart ? new Date(jsonData.metadata.timelineStart) : null;
+        const metaEnd = jsonData.metadata?.timelineEnd ? new Date(jsonData.metadata.timelineEnd) : null;
+
+        function validDate(d) { return d instanceof Date && !isNaN(d); }
+
+        if (validDate(metaStart) && validDate(metaEnd)) {
+          start = metaStart;
+          end = metaEnd;
+        } else {
+          // Compute from tasks
+          let minStart = null;
+          let maxEnd = null;
+          for (const t of processedTasks) {
+            const s = t.start instanceof Date && !isNaN(t.start) ? new Date(t.start) : null;
+            let e = t.end instanceof Date && !isNaN(t.end) ? new Date(t.end) : null;
+            if (!e && s && Number.isFinite(t.duration) && t.duration > 0) {
+              e = new Date(s);
+              e.setDate(e.getDate() + t.duration);
+            }
+            if (s) minStart = !minStart || s < minStart ? s : minStart;
+            if (e) maxEnd = !maxEnd || e > maxEnd ? e : maxEnd;
+          }
+          if (!minStart || !maxEnd) {
+            // Fallback to a default window around today
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const defaultStart = new Date(startOfToday); defaultStart.setDate(defaultStart.getDate() - 3);
+            const defaultEnd = new Date(startOfToday); defaultEnd.setDate(defaultEnd.getDate() + 30);
+            start = defaultStart;
+            end = defaultEnd;
+          } else {
+            const padStart = new Date(minStart); padStart.setDate(padStart.getDate() - 3);
+            const padEnd = new Date(maxEnd); padEnd.setDate(padEnd.getDate() + 7);
+            start = padStart;
+            end = padEnd;
+          }
+        }
 
         console.log("Loaded project data:", {
           tasksCount: processedTasks.length,
