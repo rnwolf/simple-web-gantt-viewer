@@ -699,6 +699,7 @@
           projectName: "Simple Gantt Project",
           exportDate: new Date().toISOString(),
           version: "1.0.0",
+          view: 'by-task',
           normalizedIds: !!forceNormalize || !hasTempIds,
           timelineStart: start instanceof Date ? start.toISOString() : undefined,
           timelineEnd: end instanceof Date ? end.toISOString() : undefined
@@ -780,6 +781,10 @@
       // Build new task list: summaries per resource + children duplicates
       const newTasks = [];
       const duplicateMap = new Map(); // key: `${origId}|${groupKey}` => newId
+
+      // Decide whether to normalize IDs even if temp IDs exist
+      const hasTempIds = tasks.some(t => typeof t.id === 'string' && t.id.startsWith('temp://'));
+      const forceNormalize = !!normalizeIdsOnSave;
 
       let nextId = 1;
 

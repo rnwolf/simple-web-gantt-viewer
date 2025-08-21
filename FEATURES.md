@@ -49,7 +49,7 @@ This document provides detailed information about all features available in the 
 
 - **Resource Management**:
   - Resource assignment (e.g., "R001, R002")
-  - #TODO - Add a second Gantt chart that display timeline from a specific resource perspective
+  - Resource-centric export to analyze capacity by resource (see Resource View Export below)
 
 #### Task Hierarchy
 
@@ -137,12 +137,23 @@ This document provides detailed information about all features available in the 
 #### New Project
 
 - **Clean Slate**: Clears all current project data
-- **Template Data**: Loads minimal starter template
+- **Template Data**: Loads a starter template generated relative to the current date (project starts soon). The visible timeline window is also set automatically so tasks are visible immediately.
 
 ### Data Persistence
 
+#### ID Normalization Toggle
+
+- Toolbar toggle: "Normalize IDs on save"
+- When ON (default): Saves with numeric task IDs (1..N) and remapped link endpoints for readability/testing.
+- When OFF: If any tasks have temporary `temp://` IDs, those IDs are preserved in saved tasks and links to avoid breaking relationships during editing.
+- The project metadata includes `normalizedIds` to reflect the mode used when saving.
+
+#### Timeline Viewport Persistence
+
+- Saves timeline window into metadata as `timelineStart` and `timelineEnd`.
+- On load, if metadata includes these values, the timeline is restored so the project is visible immediately.
+- If absent, the app auto-computes a window from the tasks’ min start and max end (with padding) or falls back to a sensible default around today.
 - **Session State**: Maintains project state during browser session
-- **Real-time Sync**: Changes immediately reflected in UI
 
 ## 🎨 User Interface Features
 
@@ -188,6 +199,15 @@ This document provides detailed information about all features available in the 
 - **Resources**: Assigned resource display
 
 ## ⚡ Advanced Features
+
+### Resource View Export
+- Export a resource-centric project file grouping tasks under summary tasks per resource ("Resource: {RESOURCE}").
+- Each child task is duplicated under the resources it belongs to, with type set to "progress".
+- Summary tasks’ start/end/duration are recalculated based on children in the export.
+- Links are omitted from the export for clarity.
+- Important: Tasks without any assigned resource are excluded from the resource export.
+
+TIP: Save the Resource view and open it in a second browser window. Arrange it side-by-side with the main project plan to visually compare plan vs capacity by resource.
 
 ### Zoom Configuration
 
@@ -237,108 +257,493 @@ This document provides detailed information about all features available in the 
 - **Component Architecture**: Modular, reusable SVAR components
 
 
-## Sample Project JSON File
+## ❓ FAQ
+
+- Why can’t I see my project tasks after loading a file?
+  - The timeline window (Start/End) may not overlap your tasks. The app saves `timelineStart`/`timelineEnd` in metadata and restores them on load. If these are missing, it auto-derives a window from task dates. You can also set Timeline Start/End in the top bar.
+
+## Sample Project JSON Files
+
+Project plan file export sample.
+
 
 ```json
 {
   "metadata": {
     "projectName": "Simple Gantt Project",
-    "exportDate": "2025-08-20T15:20:09.119Z",
-    "version": "1.0.0"
+    "exportDate": "2025-08-21T20:04:08.127Z",
+    "version": "1.0.0",
+    "normalizedIds": true,
+    "timelineStart": "2025-08-10T23:00:00.000Z",
+    "timelineEnd": "2025-09-29T23:00:00.000Z"
   },
   "tasks": [
     {
       "id": 1,
       "open": true,
-      "start": "2023-12-06T00:00:00.000Z",
-      "duration": 9,
+      "start": "2025-08-19T23:00:00.000Z",
+      "duration": 22,
       "text": "Project Root",
-      "progress": 60,
+      "progress": 0,
       "type": "summary",
-      "details": "Main project container with all tasks",
-      "comments": [
-        {
-          "id": 1,
-          "user": 1,
-          "content": "This is the main project container. All tasks should be organized under this.",
-          "date": "2025-08-20T15:18:36.163Z"
-        }
-      ],
-      "end": "2023-12-15T00:00:00.000Z",
+      "end": "2025-09-10T23:00:00.000Z",
+      "details": "",
       "$level": 1,
       "$skip": false
     },
     {
-      "id": 2,
+      "type": "summary",
+      "text": "Summary A",
+      "unscheduled": false,
       "parent": 1,
-      "start": "2023-12-06T00:00:00.000Z",
-      "base_start": "2023-12-05T00:00:00.000Z",
-      "base_end": "2023-12-09T00:00:00.000Z",
-      "duration": 4,
-      "text": "Task 1",
-      "progress": 75,
-      "type": "task",
-      "resources": "R001, R002",
-      "details": "First phase of the project work",
-      "comments": [],
-      "end": "2023-12-10T00:00:00.000Z",
-      "base_duration": 4,
+      "start": "2025-08-19T23:00:00.000Z",
+      "duration": 10,
+      "end": "2025-08-29T23:00:00.000Z",
+      "id": 2,
+      "progress": 0,
+      "details": "",
       "$level": 2,
       "$skip": false,
-      "optimistic": "6",
-      "pessimistic": "8",
-      "unscheduled": false
+      "open": false
     },
     {
       "id": 3,
-      "parent": 1,
-      "start": "2023-12-11T00:00:00.000Z",
-      "base_start": "2023-12-11T00:00:00.000Z",
-      "base_end": "2023-12-15T00:00:00.000Z",
+      "parent": 2,
+      "start": "2025-08-19T23:00:00.000Z",
+      "base_start": "2025-08-19T23:00:00.000Z",
+      "base_end": "2025-08-23T23:00:00.000Z",
       "duration": 4,
-      "optimistic": 11,
-      "pessimistic": 22,
+      "optimistic": 3,
+      "pessimistic": 6,
+      "text": "Task 1",
+      "progress": 82,
+      "type": "task",
+      "resources": "Resource-A",
+      "end": "2025-08-23T23:00:00.000Z",
+      "base_duration": 4,
+      "details": "",
+      "$level": 3,
+      "$skip": false,
+      "unscheduled": false
+    },
+    {
+      "id": 4,
+      "parent": 2,
+      "start": "2025-08-25T23:00:00.000Z",
+      "duration": 4,
       "text": "Task 2",
       "url": "https://example.com/task2",
-      "progress": 40,
+      "progress": 0,
       "type": "task",
-      "resources": "R003",
-      "details": "Second phase following Task 1",
-      "comments": [],
-      "end": "2023-12-15T00:00:00.000Z",
-      "base_duration": 4,
-      "$level": 2,
+      "resources": "Resource-A, Resource-B",
+      "end": "2025-08-29T23:00:00.000Z",
+      "details": "",
+      "$level": 3,
       "$skip": false
+    },
+    {
+      "type": "summary",
+      "text": "Summary B",
+      "unscheduled": false,
+      "parent": 1,
+      "start": "2025-08-30T23:00:00.000Z",
+      "duration": 5,
+      "end": "2025-09-04T23:00:00.000Z",
+      "id": 5,
+      "progress": 23,
+      "details": "This is a description box for summary B",
+      "$level": 2,
+      "$skip": false,
+      "$reorder": false,
+      "open": false,
+      "url": "https://www.example.com/task-123",
+      "optimistic": "5",
+      "pessimistic": "10",
+      "comments": [
+        {
+          "id": 1755805780521,
+          "content": "This is a comment\n",
+          "author": {
+            "id": 1,
+            "name": "Alex",
+            "color": "hsl(138, 100%, 85%)"
+          },
+          "user": 1,
+          "date": "2025-08-21T19:54:45.927Z"
+        },
+        {
+          "id": 1755805780522,
+          "content": "This is another comment",
+          "author": {
+            "id": 1,
+            "name": "Alex",
+            "color": "hsl(138, 100%, 85%)"
+          },
+          "user": 1,
+          "date": "2025-08-21T19:54:54.177Z"
+        }
+      ]
+    },
+    {
+      "type": "task",
+      "text": "Task A",
+      "unscheduled": false,
+      "parent": 5,
+      "start": "2025-08-30T23:00:00.000Z",
+      "duration": 3,
+      "end": "2025-09-02T23:00:00.000Z",
+      "id": 6,
+      "progress": 26,
+      "details": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed aliquet velit neque, et fermentum nibh fringilla vitae. Praesent orci ex, eleifend a posuere vitae, laoreet eget leo. Nam suscipit malesuada malesuada. Nunc lobortis, felis at tincidunt ullamcorper, magna purus posuere nibh, ut hendrerit elit metus sit amet ante. Nunc tempor imperdiet lacinia. Aliquam consequat non massa at suscipit. In id felis metus. Nulla malesuada suscipit iaculis.",
+      "$level": 3,
+      "$skip": false,
+      "$reorder": false,
+      "resources": "Resource-A",
+      "url": "https://www.bing.com/",
+      "optimistic": "4",
+      "pessimistic": "8",
+      "comments": [
+        {
+          "id": 1755805780523,
+          "content": "Quisque facilisis fringilla urna vitae tincidunt.",
+          "author": {
+            "id": 1,
+            "name": "Alex",
+            "color": "hsl(138, 100%, 85%)"
+          },
+          "user": 1,
+          "date": "2025-08-21T19:57:46.985Z"
+        },
+        {
+          "id": 1755805780524,
+          "content": "Quisque facilisis fringilla urna vitae tincidunt.",
+          "author": {
+            "id": 1,
+            "name": "Alex",
+            "color": "hsl(138, 100%, 85%)"
+          },
+          "user": 1,
+          "date": "2025-08-21T19:57:51.154Z"
+        }
+      ]
+    },
+    {
+      "type": "task",
+      "text": "Task B",
+      "unscheduled": false,
+      "parent": 5,
+      "start": "2025-08-31T23:00:00.000Z",
+      "duration": 4,
+      "end": "2025-09-04T23:00:00.000Z",
+      "id": 7,
+      "progress": 24,
+      "details": "uspendisse luctus erat lacus. Donec id tellus neque. Vivamus hendrerit commodo blandit. Phasellus eu vehicula elit. Morbi in aliquet massa. Ut in elit sit amet purus semper ullamcorper. In aliquet mauris eget tristique ornare. Nulla finibus eget lacus sit amet feugiat. Maecenas velit magna, dictum ut tempus sit amet, dignissim ac orci.",
+      "$level": 3,
+      "$skip": false,
+      "resources": "Resource-B",
+      "url": "https://www.google.com/taskB"
+    },
+    {
+      "type": "buffer",
+      "text": "Project Buffer",
+      "unscheduled": false,
+      "parent": 1,
+      "start": "2025-09-04T23:00:00.000Z",
+      "duration": 6,
+      "end": "2025-09-10T23:00:00.000Z",
+      "id": 8,
+      "progress": 0,
+      "details": "",
+      "$level": 2,
+      "$skip": false,
+      "$reorder": false
     }
   ],
   "links": [
     {
       "id": 1,
-      "source": 2,
-      "target": 3,
-      "type": "e2s"
+      "type": "e2s",
+      "source": 3,
+      "target": 4
+    },
+    {
+      "id": 2,
+      "type": "e2s",
+      "source": 6,
+      "target": 7
+    },
+    {
+      "id": 3,
+      "type": "e2s",
+      "source": 4,
+      "target": 6
     }
   ],
   "markers": [
     {
       "id": 1,
-      "start": "2023-12-02T00:00:00.000Z",
+      "start": "2025-08-17T23:00:00.000Z",
       "text": "Start Project",
-      "left": 0
+      "left": 700,
+      "css": ""
     },
     {
       "id": 2,
-      "start": "2023-12-08T00:00:00.000Z",
+      "start": "2025-08-25T23:00:00.000Z",
       "text": "Today",
       "css": "myMiddleClass",
-      "left": 409.8
+      "left": 1500
     },
     {
       "id": 3,
-      "start": "2023-12-25T00:00:00.000Z",
+      "start": "2025-09-10T23:00:00.000Z",
       "text": "End Project",
       "css": "myEndClass",
-      "left": 1639.2
+      "left": 3100
+    }
+  ],
+  "scales": [
+    {
+      "unit": "month",
+      "step": 1,
+      "format": "MMMM yyy"
+    },
+    {
+      "unit": "day",
+      "step": 1,
+      "format": "d"
+    }
+  ],
+  "columns": [
+    {
+      "id": "text",
+      "header": "Task name",
+      "flexgrow": 2,
+      "editor": "text"
+    },
+    {
+      "id": "url",
+      "header": "Url",
+      "flexgrow": 1,
+      "align": "left"
+    },
+    {
+      "id": "start",
+      "header": "Start date",
+      "flexgrow": 1,
+      "align": "center"
+    },
+    {
+      "id": "duration",
+      "header": "Duration",
+      "align": "center",
+      "flexgrow": 1
+    },
+    {
+      "id": "resources",
+      "header": "Resources",
+      "flexgrow": 1,
+      "align": "center",
+      "editor": "text"
+    }
+  ],
+  "taskTypes": [
+    {
+      "id": "task",
+      "label": "Task"
+    },
+    {
+      "id": "summary",
+      "label": "Summary task"
+    },
+    {
+      "id": "milestone",
+      "label": "Milestone"
+    },
+    {
+      "id": "critical",
+      "label": "Critical"
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow"
+    },
+    {
+      "id": "progress",
+      "label": "Progress"
+    },
+    {
+      "id": "buffer",
+      "label": "Buffer"
+    }
+  ]
+}
+```
+
+Sample project file for a resource view export.
+
+```json
+{
+  "metadata": {
+    "projectName": "Resource-centric export",
+    "exportDate": "2025-08-21T20:15:51.580Z",
+    "version": "1.0.0",
+    "view": "by-resource",
+    "normalizedIds": true,
+    "timelineStart": "2025-08-10T23:00:00.000Z",
+    "timelineEnd": "2025-09-29T23:00:00.000Z"
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "text": "Resource: Resource-A",
+      "type": "summary",
+      "open": true,
+      "start": "2025-08-19T23:00:00.000Z",
+      "end": "2025-09-02T23:00:00.000Z",
+      "duration": 14
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "start": "2025-08-19T23:00:00.000Z",
+      "base_start": "2025-08-19T23:00:00.000Z",
+      "base_end": "2025-08-23T23:00:00.000Z",
+      "duration": 4,
+      "optimistic": 3,
+      "pessimistic": 6,
+      "text": "Task 1",
+      "progress": 82,
+      "type": "progress",
+      "resources": "Resource-A",
+      "end": "2025-08-23T23:00:00.000Z",
+      "base_duration": 4,
+      "details": "",
+      "$level": 3,
+      "$skip": false,
+      "unscheduled": false
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "start": "2025-08-25T23:00:00.000Z",
+      "duration": 4,
+      "text": "Task 2",
+      "url": "https://example.com/task2",
+      "progress": 0,
+      "type": "progress",
+      "resources": "Resource-A, Resource-B",
+      "end": "2025-08-29T23:00:00.000Z",
+      "details": "",
+      "$level": 3,
+      "$skip": false
+    },
+    {
+      "type": "progress",
+      "text": "Task A",
+      "unscheduled": false,
+      "parent": 1,
+      "start": "2025-08-30T23:00:00.000Z",
+      "duration": 3,
+      "end": "2025-09-02T23:00:00.000Z",
+      "id": 4,
+      "progress": 26,
+      "details": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed aliquet velit neque, et fermentum nibh fringilla vitae. Praesent orci ex, eleifend a posuere vitae, laoreet eget leo. Nam suscipit malesuada malesuada. Nunc lobortis, felis at tincidunt ullamcorper, magna purus posuere nibh, ut hendrerit elit metus sit amet ante. Nunc tempor imperdiet lacinia. Aliquam consequat non massa at suscipit. In id felis metus. Nulla malesuada suscipit iaculis.",
+      "$level": 3,
+      "$skip": false,
+      "$reorder": false,
+      "resources": "Resource-A",
+      "url": "https://www.bing.com/",
+      "optimistic": "4",
+      "pessimistic": "8",
+      "comments": [
+        {
+          "id": 1755805780523,
+          "content": "Quisque facilisis fringilla urna vitae tincidunt.",
+          "author": {
+            "id": 1,
+            "name": "Alex",
+            "color": "hsl(138, 100%, 85%)"
+          },
+          "user": 1,
+          "date": "2025-08-21T19:57:46.985Z"
+        },
+        {
+          "id": 1755805780524,
+          "content": "Quisque facilisis fringilla urna vitae tincidunt.",
+          "author": {
+            "id": 1,
+            "name": "Alex",
+            "color": "hsl(138, 100%, 85%)"
+          },
+          "user": 1,
+          "date": "2025-08-21T19:57:51.154Z"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "text": "Resource: Resource-B",
+      "type": "summary",
+      "open": true,
+      "start": "2025-08-25T23:00:00.000Z",
+      "end": "2025-09-04T23:00:00.000Z",
+      "duration": 10
+    },
+    {
+      "id": 6,
+      "parent": 5,
+      "start": "2025-08-25T23:00:00.000Z",
+      "duration": 4,
+      "text": "Task 2",
+      "url": "https://example.com/task2",
+      "progress": 0,
+      "type": "progress",
+      "resources": "Resource-A, Resource-B",
+      "end": "2025-08-29T23:00:00.000Z",
+      "details": "",
+      "$level": 3,
+      "$skip": false
+    },
+    {
+      "type": "progress",
+      "text": "Task B",
+      "unscheduled": false,
+      "parent": 5,
+      "start": "2025-08-31T23:00:00.000Z",
+      "duration": 4,
+      "end": "2025-09-04T23:00:00.000Z",
+      "id": 7,
+      "progress": 24,
+      "details": "uspendisse luctus erat lacus. Donec id tellus neque. Vivamus hendrerit commodo blandit. Phasellus eu vehicula elit. Morbi in aliquet massa. Ut in elit sit amet purus semper ullamcorper. In aliquet mauris eget tristique ornare. Nulla finibus eget lacus sit amet feugiat. Maecenas velit magna, dictum ut tempus sit amet, dignissim ac orci.",
+      "$level": 3,
+      "$skip": false,
+      "resources": "Resource-B",
+      "url": "https://www.google.com/taskB"
+    }
+  ],
+  "links": [],
+  "markers": [
+    {
+      "id": 1,
+      "start": "2025-08-17T23:00:00.000Z",
+      "text": "Start Project",
+      "left": 256.125,
+      "css": ""
+    },
+    {
+      "id": 2,
+      "start": "2025-08-25T23:00:00.000Z",
+      "text": "Today",
+      "css": "myMiddleClass",
+      "left": 512.25
+    },
+    {
+      "id": 3,
+      "start": "2025-09-10T23:00:00.000Z",
+      "text": "End Project",
+      "css": "myEndClass",
+      "left": 1024.5
     }
   ],
   "scales": [

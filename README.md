@@ -37,6 +37,18 @@ When you have your plan make sure to save it to your local drive. Then maximize 
 
 ### Data Management
 
+#### ID Normalization Toggle
+
+- Toggle: "Normalize IDs on save" (in the top toolbar)
+- When ON (default): Task IDs and link endpoints are remapped to a clean numeric sequence (1..N) in the saved file for readability and testing.
+- When OFF: If any tasks have temporary IDs like `temp://123456789`, saved tasks and links will retain those IDs unmodified. This is useful during editing sessions to avoid breaking in-memory relations.
+- The save metadata includes `normalizedIds: true|false` so you can tell which mode produced the file.
+
+#### Timeline Viewport Persistence
+
+- The current timeline Start and End values are saved into metadata (`timelineStart`, `timelineEnd`).
+- When loading a file, the timeline is restored from metadata if present. If not present, the app computes a sensible window from the tasks’ min start and max end (with padding) to ensure the project is visible immediately.
+
 - **File Import/Export**: Save and load projects as JSON files
 - **Data Persistence**: Maintains state across browser sessions
 - **Real-time Updates**: Immediate visual feedback for all changes
@@ -236,9 +248,16 @@ Worker: simple-web-gantt-editor
 - Assign **resources** (team members, equipment) to tasks
 - **Resource codes** like "R001, R002" for tracking
 
-#### Resource View #TODO
+#### Resource View (export)
 
-- Display a second Gantt chart, with task assignments grouped by resource, so that we can see what the resource loading is like
+- Export a resource-centric view of your plan via the toolbar button labeled "Resources".
+- The exported JSON groups tasks by assigned resource under summary tasks labeled "Resource: {RESOURCE}".
+- Child tasks are duplicated under each resource they belong to and use the type "progress" to emphasize tracking.
+- Summary task dates (start/end/duration) are recalculated from their children in the export.
+- Links are intentionally omitted from the resource export for clearer resource loading analysis.
+- Important: Tasks without any resource assigned are excluded from the resource view export.
+
+TIP: Save the Resource view, then open a second browser window/tab, load the resource view there, and align your Project Plan window and Resource View window side-by-side. This makes it easy to visually compare plan vs capacity by resource.
 
 #### Custom Styling
 
@@ -339,6 +358,11 @@ src/
 - **Custom validators**: Implement in form components
 - **Export formats**: Extend file operations
 - **Integration APIs**: Add external system connectivity
+
+## ❓ FAQ
+
+- Why can’t I see my project tasks after loading a file?
+  - The visible timeline window (Timeline Start/End) may not overlap your project’s task dates. The app now saves `timelineStart`/`timelineEnd` in the project metadata and restores them on load. If your file lacks these, the app will auto-derive a window from task dates. You can also manually adjust "Timeline Start" and "Timeline End" in the top bar to bring tasks into view.
 
 ## 📋 Browser Compatibility
 
