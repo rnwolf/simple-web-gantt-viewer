@@ -148,6 +148,17 @@ This document provides detailed information about all features available in the 
 - When OFF: If any tasks have temporary `temp://` IDs, those IDs are preserved in saved tasks and links to avoid breaking relationships during editing.
 - The project metadata includes `normalizedIds` to reflect the mode used when saving.
 
+#### Date & Time Handling (critical)
+- Tasks and markers are saved and loaded using local-naive datetimes for their date fields (no timezone suffix).
+  - Example saved values: `2025-08-23T00:00:00` or `2025-08-23` for date-only fields.
+  - No timezone conversion is applied on save: what you see in the UI is what is written to the JSON file.
+- Loading rules:
+  - If a date string ends with `Z` (UTC), the components are interpreted as local wall-clock time so that UI display matches the JSON value.
+  - If the value is `YYYY-MM-DD`, it is parsed as a local date (midnight local) with no timezone shift.
+  - If the value is `YYYY-MM-DDTHH:mm:ss` (no `Z`), it is parsed as local time.
+- Timeline viewport (metadata):
+  - `timelineStart` and `timelineEnd` in metadata are stored as ISO strings (timezone-aware) to preserve the viewport window. These do not affect task date rendering; they only control the initial visible window when loading a project.
+
 #### Timeline Viewport Persistence
 
 - Saves timeline window into metadata as `timelineStart` and `timelineEnd`.

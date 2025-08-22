@@ -95,8 +95,56 @@
   let api = $state();
   let task = $state(null);
   let selectedTaskId = $state(null);
+  let selectedTaskIdsCache = $state([]);
   let fileInput;
   let showMarkerManager = $state(false);
+
+  function setSelectedCache(ids) {
+    if (!Array.isArray(ids)) ids = [];
+    const seen = new Set();
+    const out = [];
+    for (const v of ids) {
+      if (v != null && !seen.has(v)) { seen.add(v); out.push(v); }
+    }
+    selectedTaskIdsCache = out;
+  }
+
+  function readSelectionFromApi() {
+    const out = new Set();
+    try {
+      const state = api?.getState?.();
+      const candidates = [
+        state?.selection?.tasks,
+        state?.selection?.ids,
+        state?.tasks?.selection?.ids,
+        state?.tasks?.selected,
+        state?.selected?.tasks,
+        typeof state?.tasks?.getSelected === 'function' ? state.tasks.getSelected() : null,
+      ];
+      for (const cand of candidates) {
+        if (!cand) continue;
+        if (Array.isArray(cand)) {
+          cand.forEach(v => (v != null ? out.add(v) : null));
+        } else if (typeof cand === 'object' && Array.isArray(cand.items)) {
+          cand.items.forEach(v => (v != null ? out.add(v) : null));
+        }
+      }
+    } catch (_) {}
+    try {
+      const tasks = api?.serialize?.() || [];
+      for (const t of tasks) {
+        if (t && (t.$selected || t.selected)) out.add(t.id);
+      }
+    } catch (_) {}
+    if (out.size === 0 && selectedTaskId != null) out.add(selectedTaskId);
+    return Array.from(out);
+  }
+
+  function updateSelectedCacheFromApi() {
+    const ids = getSelectedIdsFromState();
+    if (ids && ids.length) setSelectedCache(ids);
+    else setSelectedCache(readSelectionFromApi());
+  }
 
   // Create users for the comments (following official demo pattern)
   const users = [
@@ -315,6 +363,13 @@
       const { id } = ev;
       console.log("Task selected:", id);
       selectedTaskId = id;
+      updateSelectedCacheFromApi();
+    });
+
+    // Also update cache when tasks are unselected or when selection potentially changes
+    try { api.on("unselect-task", () => updateSelectedCacheFromApi()); } catch (_) {}
+    ;["select-tasks","unselect-tasks","selection-change","clear-selection","click-task","focus-task"].forEach(evt => {
+      try { api.on(evt, () => updateSelectedCacheFromApi()); } catch (_) {}
     });
 
     // Optional: Add basic event logging to see what's happening
@@ -444,6 +499,20 @@
         console.log("Set duration to 0 for milestone");
       }
 
+      // Coerce date-like inputs from the editor to Date objects (local-naive semantics)
+      if (updatedTask.start && !(updatedTask.start instanceof Date)) {
+        updatedTask.start = parseLocalishDate(updatedTask.start);
+      }
+      if (updatedTask.end && !(updatedTask.end instanceof Date)) {
+        updatedTask.end = parseLocalishDate(updatedTask.end);
+      }
+      if (updatedTask.base_start && !(updatedTask.base_start instanceof Date)) {
+        updatedTask.base_start = parseLocalishDate(updatedTask.base_start);
+      }
+      if (updatedTask.base_end && !(updatedTask.base_end instanceof Date)) {
+        updatedTask.base_end = parseLocalishDate(updatedTask.base_end);
+      }
+
       // Recalculate end date when duration or start date exist
       if (updatedTask.start && updatedTask.duration !== undefined && updatedTask.duration > 0) {
         const startDate = new Date(updatedTask.start);
@@ -467,6 +536,141 @@
     }
 
     console.log("=== END EDITOR CHANGE ===");
+  }
+
+  // Baseline helpers
+  function extractIds(value) {
+    const out = new Set();
+    if (!value) return [];
+    if (Array.isArray(value)) {
+      value.forEach(v => (v != null ? out.add(v) : null));
+    } else if (typeof value === 'object') {
+      // common shapes: { items: [...] } or { tasks: [...] }
+      if (Array.isArray(value.items)) value.items.forEach(v => (v != null ? out.add(v) : null));
+      if (Array.isArray(value.tasks)) value.tasks.forEach(v => (v != null ? out.add(v) : null));
+      if (typeof value.getSelected === 'function') {
+        try {
+          const res = value.getSelected();
+          if (Array.isArray(res)) res.forEach(v => (v != null ? out.add(v) : null));
+          else if (res && Array.isArray(res.items)) res.items.forEach(v => (v != null ? out.add(v) : null));
+        } catch (_) {}
+      }
+      // fallthrough: scan known fields
+      const fields = ['ids','selection','selected'];
+      for (const f of fields) {
+        if (value[f]) extractIds(value[f]).forEach(v => out.add(v));
+      }
+    } else {
+      out.add(value);
+    }
+    return Array.from(out);
+  }
+
+  function getSelectedIdsFromState() {
+    try {
+      const s = api?.getState?.();
+      const out = new Set();
+      if (!s) return [];
+      const candidates = [
+        s.selected,
+        s.selected?.tasks,
+        s.selected?.ids,
+        s.tasks?.selected,
+        s.tasks?.selection?.ids,
+        s.selection?.tasks,
+        s.selection?.ids,
+      ];
+      for (const c of candidates) extractIds(c).forEach(v => out.add(v));
+      return Array.from(out);
+    } catch (_) { return []; }
+  }
+
+  function computeEndFromTask(t) {
+    if (t?.end instanceof Date && !isNaN(t.end)) return new Date(t.end);
+    if (t?.start) {
+      const s = t.start instanceof Date ? new Date(t.start) : new Date(t.start);
+      if (!isNaN(s) && Number.isFinite(t?.duration) && t.duration > 0) {
+        const e = new Date(s);
+        e.setDate(e.getDate() + t.duration);
+        return e;
+      }
+    }
+    return undefined;
+  }
+
+  function resetBaselineForTaskId(id) {
+    try {
+      if (!api || id == null) return;
+      const tasks = api.serialize();
+      // Normalize ID comparison across number/string forms
+      const t = tasks.find(x => String(x.id) === String(id));
+      if (!t) return;
+      const targetId = t.id; // use task's actual ID type
+      const base_start = t.start ? (t.start instanceof Date ? t.start : new Date(t.start)) : undefined;
+      const calcEnd = computeEndFromTask(t);
+      const base_end = calcEnd;
+      api.exec("update-task", { id: targetId, task: { base_start, base_end } });
+    } catch (e) {
+      console.warn('resetBaselineForTaskId failed:', e);
+    }
+  }
+
+  function getSelectedTaskIds() {
+    const fromState = getSelectedIdsFromState();
+    if (fromState && fromState.length) return fromState;
+    if (Array.isArray(selectedTaskIdsCache) && selectedTaskIdsCache.length > 0) return selectedTaskIdsCache.slice();
+    return readSelectionFromApi();
+  }
+
+  function resetBaselineSelectedTask() {
+    const ids = getSelectedTaskIds();
+    if (!ids || ids.length === 0) {
+      alert('No task selected. Please select at least one task.');
+      return;
+    }
+    for (const id of ids) resetBaselineForTaskId(id);
+  }
+
+  // Debug helper: dump api.getState() and multiple selection derivations
+  function debugLogState() {
+    if (!api) {
+      alert('Gantt not ready');
+      return;
+    }
+    try {
+      const state = api.getState?.();
+      const serialized = api.serialize?.() || [];
+      const selectedFromSerialized = serialized
+        .filter(t => t && (t.$selected || t.selected))
+        .map(t => t.id);
+
+      // Gather selected ids from various state shapes
+      const candidates = [
+        state?.selected,
+        state?.selected?.tasks,
+        state?.selected?.ids,
+        state?.tasks?.selected,
+        state?.tasks?.selection?.ids,
+        state?.selection?.tasks,
+        state?.selection?.ids,
+      ];
+      const fromStateSet = new Set();
+      for (const c of candidates) extractIds(c).forEach(v => fromStateSet.add(v));
+      const selectedFromState = Array.from(fromStateSet);
+
+      const viaHelper = getSelectedTaskIds();
+
+      console.group('🔎 Gantt Debug');
+      console.log('api.getState():', state);
+      console.log('state.selected:', state?.selected);
+      console.log('Derived selectedFromState:', selectedFromState);
+      console.log('Serialized tasks length:', serialized.length);
+      console.log('Derived selectedFromSerialized:', selectedFromSerialized);
+      console.log('getSelectedTaskIds() result:', viaHelper);
+      console.groupEnd();
+    } catch (e) {
+      console.error('debugLogState error:', e);
+    }
   }
 
   // Form actions - work directly with API
@@ -556,6 +760,47 @@
     return Array.isArray(currentProjectData.links) ? currentProjectData.links : [];
   }
 
+  // Helpers for date handling: treat dates as local-naive across save/load
+  function toLocalISOStringNoTZ(d) {
+    if (!d) return undefined;
+    const dt = d instanceof Date ? d : new Date(d);
+    if (isNaN(dt)) return undefined;
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;
+  }
+  function normalizeTaskDatesForSave(task) {
+    const t = { ...task };
+    if (t.start instanceof Date) t.start = toLocalISOStringNoTZ(t.start);
+    if (t.end instanceof Date) t.end = toLocalISOStringNoTZ(t.end);
+    if (t.base_start instanceof Date) t.base_start = toLocalISOStringNoTZ(t.base_start);
+    if (t.base_end instanceof Date) t.base_end = toLocalISOStringNoTZ(t.base_end);
+    return t;
+  }
+  function parseLocalishDate(value) {
+    if (!value) return undefined;
+    if (value instanceof Date) return value;
+    if (typeof value === 'string') {
+      // If ends with Z (UTC), interpret components as local wall-clock
+      if (/Z$/i.test(value)) {
+        const d = new Date(value);
+        if (!isNaN(d)) return new Date(
+          d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(),
+          d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCMilliseconds()
+        );
+      }
+      // If date-only YYYY-MM-DD, parse as local (avoid UTC shift)
+      const m = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) {
+        const [_, y, mo, da] = m;
+        return new Date(parseInt(y), parseInt(mo) - 1, parseInt(da));
+      }
+      // Otherwise rely on JS to parse as local (e.g., YYYY-MM-DDTHH:mm:ss)
+      const d2 = new Date(value);
+      if (!isNaN(d2)) return d2;
+    }
+    return undefined;
+  }
+
   // Simple save function
   function saveProject() {
     if (!api) {
@@ -602,7 +847,8 @@
           delete cleanTask.data; delete cleanTask.$x; delete cleanTask.$y; delete cleanTask.$w; delete cleanTask.$h;
           // Preserve comments
           if (task.comments && Array.isArray(task.comments)) cleanTask.comments = task.comments;
-          return cleanTask;
+          // Normalize date fields to local-naive strings
+          return normalizeTaskDatesForSave(cleanTask);
         });
 
         const taskIdSet = new Set(tasks.map(t => t.id));
@@ -670,7 +916,8 @@
             parent: task.parent != null ? idMap.get(task.parent) : undefined
           };
           if (task.comments && Array.isArray(task.comments)) finalTask.comments = task.comments;
-          return finalTask;
+          // Normalize date fields to local-naive strings
+          return normalizeTaskDatesForSave(finalTask);
         });
 
         cleanLinks = links.map((link, index) => {
@@ -701,12 +948,15 @@
           version: "1.0.0",
           view: 'by-task',
           normalizedIds: !!forceNormalize || !hasTempIds,
-          timelineStart: start instanceof Date ? start.toISOString() : undefined,
-          timelineEnd: end instanceof Date ? end.toISOString() : undefined
+          timelineStart: start instanceof Date ? toLocalISOStringNoTZ(start) : undefined,
+          timelineEnd: end instanceof Date ? toLocalISOStringNoTZ(end) : undefined
         },
         tasks: cleanTasks,
         links: cleanLinks,
-        markers: currentProjectData.markers,
+        markers: (currentProjectData.markers || []).map(m => ({
+          ...m,
+          start: m.start instanceof Date ? toLocalISOStringNoTZ(m.start) : m.start
+        })),
         scales,
         columns,
         taskTypes
@@ -811,7 +1061,10 @@
             $h: undefined,
             end
           };
-          newTasks.push(dup);
+        // Normalize duplicated task date fields for export consistency (local-naive)
+        dup.start = dup.start instanceof Date ? dup.start : parseLocalishDate(dup.start);
+        dup.end = dup.end instanceof Date ? dup.end : parseLocalishDate(dup.end);
+        newTasks.push({ ...dup, start: dup.start ? toLocalISOStringNoTZ(dup.start) : undefined, end: dup.end ? toLocalISOStringNoTZ(dup.end) : undefined });
           childIds.push(dup.id);
           duplicateMap.set(`${oid}|${groupKey}`, dup.id);
         }
@@ -841,8 +1094,8 @@
           text: title, // "Resource: {RESOURCE}"
           type: 'summary',
           open: true,
-          start: start || undefined,
-          end: end || undefined,
+          start: start ? toLocalISOStringNoTZ(start) : undefined,
+          end: end ? toLocalISOStringNoTZ(end) : undefined,
           duration: duration || undefined
         });
       }
@@ -860,8 +1113,8 @@
           version: '1.0.0',
           view: 'by-resource',
           normalizedIds: !!forceNormalize || !hasTempIds,
-          timelineStart: start instanceof Date ? start.toISOString() : undefined,
-          timelineEnd: end instanceof Date ? end.toISOString() : undefined
+          timelineStart: start instanceof Date ? toLocalISOStringNoTZ(start) : undefined,
+          timelineEnd: end instanceof Date ? toLocalISOStringNoTZ(end) : undefined
         },
         tasks: newTasks,
         links: [],
@@ -909,8 +1162,8 @@
         const processedTasks = jsonData.tasks.map(task => {
           const processedTask = {
             ...task,
-            start: new Date(task.start),
-            end: task.end ? new Date(task.end) : undefined
+            start: parseLocalishDate(task.start),
+            end: task.end ? parseLocalishDate(task.end) : undefined
           };
 
           // Explicitly preserve comments if they exist
@@ -925,7 +1178,7 @@
         // Convert marker date strings back to Date objects
         const processedMarkers = (jsonData.markers || []).map(marker => ({
           ...marker,
-          start: new Date(marker.start)
+          start: parseLocalishDate(marker.start)
         }));
 
         // Update our reactive state - this should trigger Gantt re-render
@@ -936,8 +1189,8 @@
         };
 
         // Determine and set the visible timeline window so the project is immediately visible
-        const metaStart = jsonData.metadata?.timelineStart ? new Date(jsonData.metadata.timelineStart) : null;
-        const metaEnd = jsonData.metadata?.timelineEnd ? new Date(jsonData.metadata.timelineEnd) : null;
+        const metaStart = jsonData.metadata?.timelineStart ? parseLocalishDate(jsonData.metadata.timelineStart) : null;
+        const metaEnd = jsonData.metadata?.timelineEnd ? parseLocalishDate(jsonData.metadata.timelineEnd) : null;
 
         function validDate(d) { return d instanceof Date && !isNaN(d); }
 
@@ -1279,6 +1532,12 @@
               <button class="toolbar-btn resource-export" onclick={downloadResourceView} title="Export Resource View">
                 👥 Resources
               </button>
+              <button class="toolbar-btn debug" onclick={debugLogState} title="Log api.getState() and selection details to console">
+                🔎 Debug
+              </button>
+              <button class="toolbar-btn baseline-one" onclick={resetBaselineSelectedTask} title="Reset Baseline for selected task">
+                🧭 Baseline (Selected)
+              </button>
             </div>
           </div>
           <Fullscreen hotkey="ctrl+shift+f">
@@ -1589,9 +1848,32 @@
     border-color: #0d6efd;
   }
 
-  .toolbar-btn.resource-export:hover {
+.toolbar-btn.resource-export:hover {
     background-color: #0b5ed7;
     border-color: #0b5ed7;
   }
+
+  .toolbar-btn.baseline-one {
+    background-color: #17a2b8;
+    color: white;
+    border-color: #17a2b8;
+  }
+  .toolbar-btn.baseline-one:hover {
+    background-color: #138496;
+    border-color: #117a8b;
+  }
+
+  .toolbar-btn.debug {
+    background-color: #ffc107;
+    color: #212529;
+    border-color: #ffc107;
+  }
+  .toolbar-btn.debug:hover {
+    background-color: #e0a800;
+    border-color: #d39e00;
+  }
+  /*  background-color: #0b5ed7;
+    border-color: #0b5ed7;
+  }*/
 
 </style>
