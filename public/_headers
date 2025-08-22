@@ -1,0 +1,3 @@
+/version.json
+  Cache-Control: public, max-age=60, s-maxage=60
+  Content-Type: application/json

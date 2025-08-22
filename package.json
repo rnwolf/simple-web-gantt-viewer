@@ -5,8 +5,10 @@
   "main": "index.html",
   "scripts": {
     "dev": "vite --open",
+    "prebuild": "node scripts/write-build-info.cjs",
     "build": "vite build",
     "preview": "vite preview --open",
+    "deploy": "npx wrangler deploy",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

@@ -381,6 +381,7 @@
       console.log("🔥 Task moved:", ev);
     });
 
+
     // Add double-click handler to open task editor
     api.on("show-editor", (ev) => {
       console.log("📝 Editor requested for task:", ev.id);
@@ -499,18 +500,33 @@
         console.log("Set duration to 0 for milestone");
       }
 
+      // Helper: treat blank values as null (to allow clearing fields)
+      const toNullIfBlank = (v) => (v === '' || v === null ? null : v);
+
       // Coerce date-like inputs from the editor to Date objects (local-naive semantics)
-      if (updatedTask.start && !(updatedTask.start instanceof Date)) {
-        updatedTask.start = parseLocalishDate(updatedTask.start);
+      if ('start' in updatedTask) {
+        updatedTask.start = toNullIfBlank(updatedTask.start);
+        if (updatedTask.start && !(updatedTask.start instanceof Date)) {
+          updatedTask.start = parseLocalishDate(updatedTask.start) ?? null;
+        }
       }
-      if (updatedTask.end && !(updatedTask.end instanceof Date)) {
-        updatedTask.end = parseLocalishDate(updatedTask.end);
+      if ('end' in updatedTask) {
+        updatedTask.end = toNullIfBlank(updatedTask.end);
+        if (updatedTask.end && !(updatedTask.end instanceof Date)) {
+          updatedTask.end = parseLocalishDate(updatedTask.end) ?? null;
+        }
       }
-      if (updatedTask.base_start && !(updatedTask.base_start instanceof Date)) {
-        updatedTask.base_start = parseLocalishDate(updatedTask.base_start);
+      if ('base_start' in updatedTask) {
+        updatedTask.base_start = toNullIfBlank(updatedTask.base_start);
+        if (updatedTask.base_start && !(updatedTask.base_start instanceof Date)) {
+          updatedTask.base_start = parseLocalishDate(updatedTask.base_start) ?? null;
+        }
       }
-      if (updatedTask.base_end && !(updatedTask.base_end instanceof Date)) {
-        updatedTask.base_end = parseLocalishDate(updatedTask.base_end);
+      if ('base_end' in updatedTask) {
+        updatedTask.base_end = toNullIfBlank(updatedTask.base_end);
+        if (updatedTask.base_end && !(updatedTask.base_end instanceof Date)) {
+          updatedTask.base_end = parseLocalishDate(updatedTask.base_end) ?? null;
+        }
       }
 
       // Recalculate end date when duration or start date exist
@@ -631,47 +647,8 @@
     for (const id of ids) resetBaselineForTaskId(id);
   }
 
-  // Debug helper: dump api.getState() and multiple selection derivations
-  function debugLogState() {
-    if (!api) {
-      alert('Gantt not ready');
-      return;
-    }
-    try {
-      const state = api.getState?.();
-      const serialized = api.serialize?.() || [];
-      const selectedFromSerialized = serialized
-        .filter(t => t && (t.$selected || t.selected))
-        .map(t => t.id);
 
-      // Gather selected ids from various state shapes
-      const candidates = [
-        state?.selected,
-        state?.selected?.tasks,
-        state?.selected?.ids,
-        state?.tasks?.selected,
-        state?.tasks?.selection?.ids,
-        state?.selection?.tasks,
-        state?.selection?.ids,
-      ];
-      const fromStateSet = new Set();
-      for (const c of candidates) extractIds(c).forEach(v => fromStateSet.add(v));
-      const selectedFromState = Array.from(fromStateSet);
 
-      const viaHelper = getSelectedTaskIds();
-
-      console.group('🔎 Gantt Debug');
-      console.log('api.getState():', state);
-      console.log('state.selected:', state?.selected);
-      console.log('Derived selectedFromState:', selectedFromState);
-      console.log('Serialized tasks length:', serialized.length);
-      console.log('Derived selectedFromSerialized:', selectedFromSerialized);
-      console.log('getSelectedTaskIds() result:', viaHelper);
-      console.groupEnd();
-    } catch (e) {
-      console.error('debugLogState error:', e);
-    }
-  }
 
   // Form actions - work directly with API
   function formAction(ev) {
@@ -1532,9 +1509,6 @@
               <button class="toolbar-btn resource-export" onclick={downloadResourceView} title="Export Resource View">
                 👥 Resources
               </button>
-              <button class="toolbar-btn debug" onclick={debugLogState} title="Log api.getState() and selection details to console">
-                🔎 Debug
-              </button>
               <button class="toolbar-btn baseline-one" onclick={resetBaselineSelectedTask} title="Reset Baseline for selected task">
                 🧭 Baseline (Selected)
               </button>
@@ -1863,15 +1837,6 @@
     border-color: #117a8b;
   }
 
-  .toolbar-btn.debug {
-    background-color: #ffc107;
-    color: #212529;
-    border-color: #ffc107;
-  }
-  .toolbar-btn.debug:hover {
-    background-color: #e0a800;
-    border-color: #d39e00;
-  }
   /*  background-color: #0b5ed7;
     border-color: #0b5ed7;
   }*/
