@@ -32,7 +32,6 @@ When you have your plan make sure to save it to your local drive. Then maximize 
 - **Custom Toolbar**: Save, load, new project, and marker management buttons
 - **Task Editor**: Comprehensive form with two-column layout for task details
 - **Comments System**: Built-in commenting system for task collaboration
-- **Responsive Design**: Works on desktop and mobile devices
 - **Custom Tooltips**: Rich hover information for tasks and timeline elements
 
 ### Data Management
@@ -111,7 +110,7 @@ assets = { directory = "./dist" }
 Install cloudfare wrangler CLI utility
 
 ```bash
- npx wrangler --version
+npx wrangler --version
 ```
 
 Login to your account
@@ -121,7 +120,7 @@ npx wrangler login
 
 Deploy app to cloud site
 ```bash
-npx wrangler deploy
+npm run deploy
 ```
 
 Deployment console output
@@ -214,7 +213,7 @@ Prerequisites: Astral’s uv (no virtualenv needed). The script declares its dep
 
 - Export JSON -> Excel
   ```bash
-  uv run scripts/gantt_excel_helper.py to-xlsx --in docs/gantt-project-2025-08-21.json --out out.xlsx
+  uv run scripts/gantt_excel_helper.py to-xlsx --in docs/gantt-project-2025-08-22.json --out out.xlsx
   ```
 
 - Import Excel -> JSON
