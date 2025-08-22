@@ -282,9 +282,10 @@ TIP: Save the Resource view and open it in a second browser window. Arrange it s
 
 ## Sample Project JSON Files
 
-Project plan file export sample. [gantt-project-2025-08-22.json](docs/gantt-project-2025-08-22.json)
+ - Project plan file export sample. [gantt-project-2025-08-22.json](docs/gantt-project-2025-08-22.json)
+ - Resource plan view export sample. [gantt-project-by-resource-2025-08-22.json](docs/gantt-project-by-resource-2025-08-22.json)
 
-Resouerce view export sample. [gantt-project-by-resource-2025-08-22.json](docs/gantt-project-by-resource-2025-08-22.json)
+
 ---
 
 *This feature set provides a comprehensive project management solution suitable for teams and individuals managing complex projects with dependencies, resources, and timeline requirements.*
