@@ -99,20 +99,23 @@ LINK_FIELDS_ORDER = [
 
 def to_iso_z(dt: Any) -> Optional[str]:
     """Convert various datetime-like values to ISO 8601 with trailing Z.
-    Returns None if value is empty.
+    Returns None if value is empty or not a valid datetime (e.g., NaT/NaN/None/null strings).
     """
-    if dt is None or (isinstance(dt, float) and pd.isna(dt)):
+    # Explicit None
+    if dt is None:
         return None
 
-    # If it's already a string, try to parse
+    # Strings: treat common placeholders as empty; otherwise try to parse
     if isinstance(dt, str):
         s = dt.strip()
         if not s:
             return None
+        if s.lower() in {"nat", "nan", "none", "null"}:
+            return None
         try:
             d = dateparser.parse(s)
         except Exception:
-            # Keep as-is but ensure Z if it looks like ISO
+            # Keep as-is if not parseable (caller may decide whether to include it)
             return s
         return to_iso_z(d)
 
@@ -126,6 +129,13 @@ def to_iso_z(dt: Any) -> Optional[str]:
         # Trim microseconds to milliseconds for brevity (optional)
         iso = d.isoformat().replace("+00:00", "Z")
         return iso
+
+    # Generic NaN/NaT handling for non-string, non-datetime scalars
+    try:
+        if pd.isna(dt):
+            return None
+    except Exception:
+        pass
 
     return None
 
@@ -284,6 +294,24 @@ def import_from_excel(xlsx_path: Path, project_name: Optional[str], timeline_sta
         if "text" not in t:
             t["text"] = f"Task {t.get('id', '')}".strip()
         tasks.append(t)
+
+    # Final cleanup: remove invalid baseline fields that may have slipped through as strings
+    def _is_invalid_date_value(val: Any) -> bool:
+        if val is None:
+            return True
+        try:
+            if pd.isna(val):
+                return True
+        except Exception:
+            pass
+        if isinstance(val, str) and val.strip().lower() in {"", "nat", "nan", "none", "null"}:
+            return True
+        return False
+
+    for _t in tasks:
+        for _k in ("base_start", "base_end"):
+            if _k in _t and _is_invalid_date_value(_t[_k]):
+                del _t[_k]
 
     links: List[Dict[str, Any]] = []
     for _, r in df_links.iterrows():

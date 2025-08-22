@@ -1,0 +1,199 @@
+{
+  "metadata": {
+    "projectName": "My Plan",
+    "exportDate": "2025-08-22T15:01:53.233592Z",
+    "version": "1.0.0",
+    "normalizedIds": true,
+    "timelineStart": "2023-12-03T00:00:00Z",
+    "timelineEnd": "2023-12-27T00:00:00Z"
+  },
+  "tasks": [
+    {
+      "id": 1,
+      "text": "Project Root",
+      "type": "summary",
+      "start": "2023-12-06T00:00:00Z",
+      "end": "2023-12-14T00:00:00Z",
+      "duration": 8,
+      "progress": 60.0,
+      "details": "Main project container with all tasks",
+      "open": true
+    },
+    {
+      "id": 2,
+      "parent": 1,
+      "text": "Task 1",
+      "type": "task",
+      "start": "2023-12-06T00:00:00Z",
+      "end": "2023-12-10T00:00:00Z",
+      "duration": 4,
+      "progress": 80.0,
+      "resources": "R001, R002",
+      "details": "First phase of the project work",
+      "base_start": "2023-12-05T00:00:00Z",
+      "base_end": "2023-12-09T00:00:00Z"
+    },
+    {
+      "id": 3,
+      "parent": 1,
+      "text": "Task 2",
+      "type": "task",
+      "start": "2023-12-11T00:00:00Z",
+      "end": "2023-12-15T00:00:00Z",
+      "duration": 4,
+      "optimistic": 10,
+      "pessimistic": 15,
+      "progress": 40.0,
+      "resources": "R003",
+      "url": "https://example.com/task2",
+      "details": "Second phase following Task 1",
+      "base_start": "2023-12-11T00:00:00Z",
+      "base_end": "2023-12-15T00:00:00Z"
+    },
+    {
+      "id": 4,
+      "text": "A",
+      "type": "task",
+      "start": "2023-12-09T00:00:00Z",
+      "end": "2023-12-16T00:00:00Z",
+      "duration": 7,
+      "progress": 0.0,
+      "resources": "R001",
+      "unscheduled": false
+    },
+    {
+      "id": 5,
+      "text": "B",
+      "type": "task",
+      "start": "2023-12-12T00:00:00Z",
+      "end": "2023-12-13T00:00:00Z",
+      "duration": 1,
+      "progress": 0.0,
+      "resources": "R002",
+      "unscheduled": false,
+      "base_start": "2023-12-12T00:00:00Z",
+      "base_end": "2023-12-13T00:00:00Z"
+    },
+    {
+      "id": 6,
+      "text": "C",
+      "type": "task",
+      "start": "2023-12-14T00:00:00Z",
+      "end": "2023-12-15T00:00:00Z",
+      "duration": 1,
+      "progress": 0.0,
+      "resources": "R003",
+      "unscheduled": false,
+      "base_start": "2023-12-14T00:00:00Z",
+      "base_end": "2023-12-15T00:00:00Z"
+    },
+    {
+      "id": 7,
+      "text": "D",
+      "type": "task",
+      "start": "2023-12-19T00:00:00Z",
+      "end": "2023-12-20T00:00:00Z",
+      "duration": 1,
+      "progress": 0.0,
+      "resources": "R001",
+      "unscheduled": false,
+      "base_start": "2023-12-19T00:00:00Z",
+      "base_end": "2023-12-20T00:00:00Z"
+    }
+  ],
+  "links": [
+    {
+      "id": 1,
+      "source": 2,
+      "target": 3,
+      "type": "e2s"
+    },
+    {
+      "id": 2,
+      "source": 5,
+      "target": 6,
+      "type": "e2s"
+    },
+    {
+      "id": 3,
+      "source": 6,
+      "target": 7,
+      "type": "e2s"
+    }
+  ],
+  "scales": [
+    {
+      "unit": "month",
+      "step": 1,
+      "format": "MMMM yyy"
+    },
+    {
+      "unit": "day",
+      "step": 1,
+      "format": "d"
+    }
+  ],
+  "columns": [
+    {
+      "id": "text",
+      "header": "Task name",
+      "flexgrow": 2,
+      "editor": "text"
+    },
+    {
+      "id": "url",
+      "header": "Url",
+      "flexgrow": 1,
+      "align": "left"
+    },
+    {
+      "id": "start",
+      "header": "Start date",
+      "flexgrow": 1,
+      "align": "center"
+    },
+    {
+      "id": "duration",
+      "header": "Duration",
+      "align": "center",
+      "flexgrow": 1
+    },
+    {
+      "id": "resources",
+      "header": "Resources",
+      "flexgrow": 1,
+      "align": "center",
+      "editor": "text"
+    }
+  ],
+  "taskTypes": [
+    {
+      "id": "task",
+      "label": "Task"
+    },
+    {
+      "id": "summary",
+      "label": "Summary task"
+    },
+    {
+      "id": "milestone",
+      "label": "Milestone"
+    },
+    {
+      "id": "critical",
+      "label": "Critical"
+    },
+    {
+      "id": "narrow",
+      "label": "Narrow"
+    },
+    {
+      "id": "progress",
+      "label": "Progress"
+    },
+    {
+      "id": "buffer",
+      "label": "Buffer"
+    }
+  ]
+}
